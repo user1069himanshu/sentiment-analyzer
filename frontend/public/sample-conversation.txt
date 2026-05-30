@@ -1,0 +1,15 @@
+Agent: Thank you for calling BrightConnect support, my name is Priya. How can I help you today?
+Customer: Hi, I'm honestly pretty frustrated. My internet has been down since yesterday morning and I work from home.
+Agent: I'm really sorry to hear that, I completely understand how stressful that must be. Let me pull up your account right away.
+Customer: I already called yesterday and nobody fixed it. This is the second time this month.
+Agent: I apologize for the repeated trouble. I can see there was an outage in your area that should now be resolved. Let me run a line test.
+Customer: Okay... how long will that take?
+Agent: Just about thirty seconds. While that runs, I'd like to credit your account for the downtime as an apology.
+Customer: Oh, that would actually be great. Thank you.
+Agent: The line test came back clean and your connection is showing active now. Could you try loading a website for me?
+Customer: Give me a sec... yeah, it's working now! Finally.
+Agent: Wonderful, I'm so glad. I've applied a credit for two days of service and added a note so any future issue gets escalated faster.
+Customer: I really appreciate that. You've been much more helpful than the last person.
+Agent: That means a lot, thank you. Is there anything else I can help you with today?
+Customer: No, that's everything. Thanks again, Priya.
+Agent: My pleasure. Have a great rest of your day!
