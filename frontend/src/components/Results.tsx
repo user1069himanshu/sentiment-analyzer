@@ -18,6 +18,7 @@ export default function Results({
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Analysis results</h1>
@@ -34,18 +35,14 @@ export default function Results({
         </button>
       </div>
 
-      {/* Headline + summary */}
+      {/* Overall + summary */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
             Overall sentiment
           </p>
           <div className="mt-2 flex items-center gap-3">
-            <span
-              className={`rounded-full px-3 py-1 text-lg font-semibold ${sentimentBadge(
-                overall.sentiment
-              )}`}
-            >
+            <span className={`rounded-full px-3 py-1 text-lg font-semibold ${sentimentBadge(overall.sentiment)}`}>
               {overall.sentiment}
             </span>
             <span className="text-sm text-muted">
@@ -65,10 +62,7 @@ export default function Results({
           {kpis.key_topics.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {kpis.key_topics.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand"
-                >
+                <span key={t} className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
                   {t}
                 </span>
               ))}
@@ -77,35 +71,86 @@ export default function Results({
         </div>
       </div>
 
-      {/* KPI cards */}
+      {/* Call phase sentiment */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
+          Call phase sentiment
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          {(["opening", "middle", "closing"] as const).map((phase) => (
+            <div key={phase} className="rounded-xl border border-border p-3 text-center">
+              <p className="text-xs text-muted mb-1">{titleCase(phase)}</p>
+              <span className={`rounded-full px-2.5 py-1 text-sm font-semibold ${sentimentBadge(kpis.call_phase_sentiment[phase])}`}>
+                {kpis.call_phase_sentiment[phase]}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Primary KPI row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Kpi label="CSAT (proxy)" value={`${kpis.csat_proxy}`} suffix="/100" />
+        <Kpi label="NPS (proxy)" value={`${kpis.nps_proxy > 0 ? "+" : ""}${kpis.nps_proxy}`} suffix="/100" />
         <Kpi label="Empathy" value={`${kpis.empathy_score}`} suffix="/100" />
+        <Kpi label="Agent compliance" value={`${kpis.agent_compliance}`} suffix="/100" />
+      </div>
+
+      {/* Secondary KPI row */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiBadge label="Sentiment trend" text={titleCase(kpis.sentiment_trend)} />
-        <KpiBadge
-          label="Resolution"
-          text={titleCase(kpis.resolution)}
-        />
-        <KpiBadge
-          label="Churn risk"
-          text={titleCase(kpis.churn_risk)}
-          className={riskBadge(kpis.churn_risk)}
-        />
-        <KpiBadge
-          label="Escalation risk"
-          text={titleCase(kpis.escalation_risk)}
-          className={riskBadge(kpis.escalation_risk)}
-        />
-        <KpiBadge
-          label="Agent sentiment"
-          text={kpis.agent_sentiment ?? "—"}
-          className={kpis.agent_sentiment ? sentimentBadge(kpis.agent_sentiment) : ""}
-        />
-        <KpiBadge
-          label="Customer sentiment"
-          text={kpis.customer_sentiment ?? "—"}
-          className={kpis.customer_sentiment ? sentimentBadge(kpis.customer_sentiment) : ""}
-        />
+        <KpiBadge label="Resolution" text={titleCase(kpis.resolution)} />
+        <KpiBadge label="Churn risk" text={titleCase(kpis.churn_risk)} className={riskBadge(kpis.churn_risk)} />
+        <KpiBadge label="Escalation risk" text={titleCase(kpis.escalation_risk)} className={riskBadge(kpis.escalation_risk)} />
+        <KpiBadge label="Agent sentiment" text={kpis.agent_sentiment ?? "—"} className={kpis.agent_sentiment ? sentimentBadge(kpis.agent_sentiment) : ""} />
+        <KpiBadge label="Customer sentiment" text={kpis.customer_sentiment ?? "—"} className={kpis.customer_sentiment ? sentimentBadge(kpis.customer_sentiment) : ""} />
+        <KpiBadge label="Interruption risk" text={titleCase(kpis.interruption_risk)} className={riskBadge(kpis.interruption_risk)} />
+        <Kpi label="Emotion intensity" value={`${kpis.emotion_intensity}`} suffix="/100" />
+      </div>
+
+      {/* Talk/listen ratio + silence */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
+            Talk / listen ratio
+          </p>
+          <div className="space-y-2">
+            {(["agent", "customer"] as const).map((role) => {
+              const pct = kpis.talk_listen_ratio[role];
+              return (
+                <div key={role}>
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="font-medium">{titleCase(role)}</span>
+                    <span className="text-muted">{pct}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-border">
+                    <div
+                      className="h-2 rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        background: role === "agent" ? "var(--brand)" : "var(--positive)",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            Industry benchmark: Agent ~57% / Customer ~43% (Gong)
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
+            Call quality indicators
+          </p>
+          <div className="space-y-3">
+            <QualityBar label="Silence score" value={kpis.silence_score} help="Higher = more substantive exchange" />
+            <QualityBar label="Agent compliance" value={kpis.agent_compliance} help="Greet · Empathize · Resolve · Close" />
+            <QualityBar label="Empathy score" value={kpis.empathy_score} help="Acknowledgement + follow-through" />
+          </div>
+        </div>
       </div>
 
       {/* Charts */}
@@ -129,15 +174,7 @@ export default function Results({
   );
 }
 
-function Kpi({
-  label,
-  value,
-  suffix,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-}) {
+function Kpi({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-xs font-medium text-muted">{label}</p>
@@ -161,11 +198,25 @@ function KpiBadge({
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-xs font-medium text-muted">{label}</p>
-      <span
-        className={`mt-2 inline-block rounded-full px-2.5 py-1 text-sm font-semibold ${className}`}
-      >
+      <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-sm font-semibold ${className}`}>
         {text}
       </span>
+    </div>
+  );
+}
+
+function QualityBar({ label, value, help }: { label: string; value: number; help: string }) {
+  const color = value >= 70 ? "var(--positive)" : value >= 40 ? "#f59e0b" : "var(--negative)";
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-xs">
+        <span className="font-medium">{label}</span>
+        <span className="text-muted">{value}/100</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-border">
+        <div className="h-2 rounded-full transition-all" style={{ width: `${value}%`, background: color }} />
+      </div>
+      <p className="mt-0.5 text-xs text-muted">{help}</p>
     </div>
   );
 }

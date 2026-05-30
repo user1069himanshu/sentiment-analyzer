@@ -1,0 +1,100 @@
+{
+  "name": "Sentiment Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sentiment-analyze",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "sentiment-analyze"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preprocess: validate, normalize, split into speaker-labeled sentences\nconst body = $input.first().json.body;\nconst rawText = typeof body === 'object' && body !== null ? body.text : body;\n\nif (!rawText || typeof rawText !== 'string') {\n  throw new Error('No text field in request body.');\n}\n\nconst SPEAKER_RE = /^\\s*([A-Za-z][\\w .'\\-]{0,30}?)\\s*[:\\-]\\s*(.*)$/;\n\nfunction splitSentences(text) {\n  return text.split(/(?<=[.!?])\\s+(?=[A-Z0-9\"'])/).map(s => s.trim()).filter(Boolean);\n}\n\nconst lines = rawText.replace(/\\r\\n/g, '\\n').split('\\n').map(l => l.trim()).filter(Boolean);\nconst sentences = [];\nlet idx = 0;\n\nfor (const line of lines) {\n  const m = line.match(SPEAKER_RE);\n  const speaker = m ? m[1].trim() : null;\n  const body = m ? m[2] : line;\n  for (const s of splitSentences(body)) {\n    sentences.push({ index: idx++, speaker, text: s });\n  }\n}\n\nif (sentences.length === 0) throw new Error('No analyzable sentences found.');\n\nconst table = sentences.map(s => `${s.index}\\t${s.speaker ?? 'Unknown'}\\t${s.text}`).join('\\n');\n\nreturn [{ json: { sentences, table, raw: rawText } }];"
+      },
+      "id": "preprocess-node",
+      "name": "Preprocess",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a contact-center conversation analyst. Return strict JSON only. Sentiment: Positive/Negative/Neutral. Emotion: joy/satisfaction/anger/frustration/sadness/fear/neutral/surprise/disgust/anticipation. Scores -1.0 to 1.0. Think step by step before assigning KPI values."
+            },
+            {
+              "role": "user",
+              "content": "=Analyze this transcript. Each line: index<TAB>speaker<TAB>text.\n\n{{ $json.table }}\n\nReturn ONLY this JSON shape:\n{\n  \"overall\": { \"sentiment\": \"Positive|Negative|Neutral\", \"score\": 0.0, \"confidence\": 0.0, \"reasoning\": \"\" },\n  \"sentences\": [ { \"index\": 0, \"sentiment\": \"\", \"score\": 0.0, \"emotion\": \"\" } ],\n  \"emotions\": { \"joy\": 0, \"satisfaction\": 0, \"anger\": 0, \"frustration\": 0, \"sadness\": 0, \"fear\": 0, \"neutral\": 0, \"surprise\": 0, \"disgust\": 0, \"anticipation\": 0 },\n  \"summary\": \"\",\n  \"kpis\": {\n    \"csat_proxy\": 0,\n    \"nps_proxy\": 0,\n    \"sentiment_trend\": \"improving|declining|flat\",\n    \"churn_risk\": \"low|medium|high\",\n    \"escalation_risk\": \"low|medium|high\",\n    \"resolution\": \"resolved|partial|unresolved\",\n    \"empathy_score\": 0,\n    \"agent_compliance\": 0,\n    \"emotion_intensity\": 0,\n    \"silence_score\": 0,\n    \"interruption_risk\": \"low|medium|high\",\n    \"key_topics\": [],\n    \"agent_sentiment\": null,\n    \"customer_sentiment\": null,\n    \"call_phase_sentiment\": { \"opening\": \"Positive|Negative|Neutral\", \"middle\": \"Positive|Negative|Neutral\", \"closing\": \"Positive|Negative|Neutral\" }\n  }\n}\n\nKPI derivation rules:\n- csat_proxy (0-100, NOT 0-10): High >70 if resolved+Positive customer. Low <40 if unresolved+Negative.\n- nps_proxy (-100 to 100): promoters=customer sentences with score>0.5, detractors=score<-0.3. Formula: round((promoters-detractors)/total_customer*100).\n- churn_risk: high if customer_sentiment=Negative AND resolution!=resolved. low if Positive AND resolved.\n- empathy_score (0-100, NOT 0-10): agent acknowledge(+20)+apologize(+20)+offer solution(+20)+follow through(+20)+close warmly(+20).\n- agent_compliance (0-100, NOT 0-10): greet(+20)+empathize(+20)+offer resolution(+20)+resolve(+20)+close politely(+20).\n- emotion_intensity (0-100): round(abs(min_sentence_score)*100).\n- silence_score (0-100): substantive sentences (>4 words) as % of total * 100.\n- interruption_risk: high if speakers alternate every 1-2 lines with negative tone.\n- call_phase_sentiment: split sentences into thirds, dominant Sentiment per third.\n- emotions: distribution summing to 1.0 across all 10 emotions.\n- reasoning: 2-3 sentences with chain-of-thought explanation."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.1,
+          "responseFormat": "json_object"
+        }
+      },
+      "id": "openai-node",
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate: merge LLM output with pre-segmented sentences\nconst raw = $('OpenAI').first().json;\nconst llmRaw = raw.message?.content ?? raw.content ?? raw.text ?? '{}';\nconst sentences = $('Preprocess').first().json.sentences;\n\nlet parsed;\ntry { parsed = JSON.parse(typeof llmRaw === 'string' ? llmRaw : JSON.stringify(llmRaw)); }\ncatch { parsed = typeof llmRaw === 'object' ? llmRaw : {}; }\n\nconst EMOTIONS = ['joy','satisfaction','anger','frustration','sadness','fear','neutral','surprise','disgust','anticipation'];\nconst SENTIMENTS = ['Positive','Negative','Neutral'];\n\nfunction clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, isFinite(n) ? n : 0)); }\nfunction clampScore(n) { return clamp(n, -1, 1); }\nfunction toSentiment(score) {\n  if (score > 0.15) return 'Positive';\n  if (score < -0.15) return 'Negative';\n  return 'Neutral';\n}\nfunction avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }\nfunction oneOf(v, opts, fb) { return opts.includes(v) ? v : fb; }\nfunction normScale(v, fb, lo, hi) {\n  if (typeof v !== 'number' || !isFinite(v)) return fb;\n  const n = v <= 10 ? v * 10 : v;\n  return Math.round(clamp(n, lo, hi));\n}\n\n// Merge sentence-level analysis\nconst byIndex = new Map();\nfor (const s of (parsed.sentences ?? [])) {\n  byIndex.set(s.index, { sentiment: s.sentiment, score: s.score, emotion: s.emotion });\n}\nconst merged = sentences.map(s => {\n  const a = byIndex.get(s.index);\n  return {\n    index: s.index,\n    speaker: s.speaker,\n    text: s.text,\n    sentiment: oneOf(a?.sentiment, SENTIMENTS, 'Neutral'),\n    score: clampScore(a?.score ?? 0),\n    emotion: EMOTIONS.includes(a?.emotion) ? a.emotion : 'neutral'\n  };\n});\n\n// Normalize emotion distribution (10 emotions)\nconst emoBase = Object.fromEntries(EMOTIONS.map(e=>[e,0]));\nif (parsed.emotions && typeof parsed.emotions === 'object') {\n  for (const e of EMOTIONS) if (typeof parsed.emotions[e] === 'number') emoBase[e] = parsed.emotions[e];\n}\nconst emoTotal = Object.values(emoBase).reduce((a,b)=>a+b,0) || 1;\nfor (const e of EMOTIONS) emoBase[e] = +(emoBase[e]/emoTotal).toFixed(3);\n\n// KPI derivation fallbacks\nconst scores = merged.map(s=>s.score);\nconst n = scores.length;\nconst t1 = Math.floor(n/3), t2 = Math.floor(2*n/3);\nconst half = Math.ceil(n/2);\nconst firstHalf = avg(scores.slice(0,half));\nconst secondHalf = avg(scores.slice(half));\nconst delta = secondHalf - firstHalf;\nconst overallScore = clampScore(parsed.overall?.score ?? avg(scores));\n\nconst customerSentences = merged.filter(s=>s.speaker?.toLowerCase()==='customer');\nconst src = customerSentences.length ? customerSentences : merged;\nconst total = src.length || 1;\nconst promoters = src.filter(s=>s.score>0.5).length;\nconst detractors = src.filter(s=>s.score<-0.3).length;\nconst derivedNps = Math.round(clamp((promoters-detractors)/total*100,-100,100));\n\nconst minScore = scores.length ? Math.min(...scores) : 0;\nconst derivedIntensity = Math.round(Math.abs(minScore)*100);\nconst substantive = merged.filter(s=>s.text.split(' ').length>4).length;\nconst derivedSilence = Math.round(substantive/Math.max(1,n)*100);\n\nlet alterCount = 0;\nfor (let i=1; i<merged.length; i++) if (merged[i].speaker !== merged[i-1].speaker) alterCount++;\nconst alterRate = alterCount / Math.max(1, n-1);\nconst derivedInterrupt = alterRate > 0.8 && overallScore < -0.1 ? 'high' : alterRate > 0.6 ? 'medium' : 'low';\n\n// Talk/listen ratio (computed here, not from LLM)\nconst counts = {agent:0, customer:0, unknown:0};\nfor (const s of merged) {\n  const k = s.speaker?.toLowerCase();\n  if (k==='agent') counts.agent++;\n  else if (k==='customer') counts.customer++;\n  else counts.unknown++;\n}\nconst talkRatio = {\n  agent: Math.round(counts.agent/n*100),\n  customer: Math.round(counts.customer/n*100),\n  unknown: Math.round(counts.unknown/n*100)\n};\n\n// Call phase sentiment\nconst phaseAvg = (slice) => toSentiment(avg(slice.map(s=>s.score)));\nconst callPhase = {\n  opening: oneOf(parsed.kpis?.call_phase_sentiment?.opening, SENTIMENTS, phaseAvg(merged.slice(0,t1))),\n  middle: oneOf(parsed.kpis?.call_phase_sentiment?.middle, SENTIMENTS, phaseAvg(merged.slice(t1,t2))),\n  closing: oneOf(parsed.kpis?.call_phase_sentiment?.closing, SENTIMENTS, phaseAvg(merged.slice(t2)))\n};\n\nconst kpis = parsed.kpis ?? {};\nconst RISK = ['low','medium','high'];\nconst TREND = ['improving','declining','flat'];\nconst RES = ['resolved','partial','unresolved'];\n\nconst result = {\n  overall: {\n    sentiment: oneOf(parsed.overall?.sentiment, SENTIMENTS, toSentiment(overallScore)),\n    score: overallScore,\n    confidence: clamp(parsed.overall?.confidence ?? 0.8, 0, 1),\n    reasoning: parsed.overall?.reasoning ?? ''\n  },\n  sentences: merged,\n  emotions: emoBase,\n  summary: parsed.summary ?? '',\n  kpis: {\n    csat_proxy: normScale(kpis.csat_proxy, Math.round(((overallScore+1)/2)*100), 0, 100),\n    nps_proxy: Math.round(clamp(typeof kpis.nps_proxy === 'number' ? kpis.nps_proxy : derivedNps, -100, 100)),\n    sentiment_trend: oneOf(kpis.sentiment_trend, TREND, delta>0.1?'improving':delta<-0.1?'declining':'flat'),\n    churn_risk: oneOf(kpis.churn_risk, RISK, 'medium'),\n    escalation_risk: oneOf(kpis.escalation_risk, RISK, 'low'),\n    resolution: oneOf(kpis.resolution, RES, 'partial'),\n    empathy_score: normScale(kpis.empathy_score, 70, 0, 100),\n    agent_compliance: normScale(kpis.agent_compliance, 70, 0, 100),\n    emotion_intensity: normScale(kpis.emotion_intensity, derivedIntensity, 0, 100),\n    silence_score: normScale(kpis.silence_score, derivedSilence, 0, 100),\n    interruption_risk: oneOf(kpis.interruption_risk, RISK, derivedInterrupt),\n    key_topics: Array.isArray(kpis.key_topics) ? kpis.key_topics.slice(0,6) : [],\n    agent_sentiment: SENTIMENTS.includes(kpis.agent_sentiment) ? kpis.agent_sentiment : null,\n    customer_sentiment: SENTIMENTS.includes(kpis.customer_sentiment) ? kpis.customer_sentiment : null,\n    talk_listen_ratio: talkRatio,\n    call_phase_sentiment: callPhase\n  },\n  meta: {\n    sentence_count: merged.length,\n    model: 'gpt-4o',\n    source: 'n8n',\n    processed_at: new Date().toISOString()\n  }\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "aggregate-node",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstEntryJson",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Preprocess", "type": "main", "index": 0 }]]
+    },
+    "Preprocess": {
+      "main": [[{ "node": "OpenAI", "type": "main", "index": 0 }]]
+    },
+    "OpenAI": {
+      "main": [[{ "node": "Aggregate", "type": "main", "index": 0 }]]
+    },
+    "Aggregate": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

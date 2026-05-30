@@ -32,6 +32,9 @@ export const EMOTION_COLORS: Record<Emotion, string> = {
   sadness: "#2563eb",
   fear: "#7c3aed",
   neutral: "#9ca3af",
+  surprise: "#06b6d4",
+  disgust: "#84cc16",
+  anticipation: "#f97316",
 };
 
 export function titleCase(s: string): string {

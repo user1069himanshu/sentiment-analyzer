@@ -10,11 +10,14 @@ export type Emotion =
   | "frustration"
   | "sadness"
   | "fear"
-  | "neutral";
+  | "neutral"
+  | "surprise"
+  | "disgust"
+  | "anticipation";
 
 export interface SentenceAnalysis {
   index: number;
-  speaker: string | null; // "Agent" | "Customer" | null when unlabeled
+  speaker: string | null;
   text: string;
   sentiment: Sentiment;
   score: number; // -1.0 .. 1.0
@@ -32,16 +35,37 @@ export type RiskLevel = "low" | "medium" | "high";
 export type Resolution = "resolved" | "partial" | "unresolved";
 export type Trend = "improving" | "declining" | "flat";
 
+export interface CallPhaseSentiment {
+  opening: Sentiment;
+  middle: Sentiment;
+  closing: Sentiment;
+}
+
+export interface TalkListenRatio {
+  agent: number;   // percentage 0–100
+  customer: number;
+  unknown: number;
+}
+
 export interface CallKPIs {
-  csat_proxy: number; // 0 .. 100
+  // --- original ---
+  csat_proxy: number;          // 0 .. 100
   sentiment_trend: Trend;
   churn_risk: RiskLevel;
   escalation_risk: RiskLevel;
   resolution: Resolution;
-  empathy_score: number; // 0 .. 100
+  empathy_score: number;       // 0 .. 100
   key_topics: string[];
   agent_sentiment: Sentiment | null;
   customer_sentiment: Sentiment | null;
+  // --- new ---
+  nps_proxy: number;           // -100 .. 100  (Net Promoter Score estimate)
+  agent_compliance: number;    // 0 .. 100  (script adherence: greet/empathize/solve/close)
+  emotion_intensity: number;   // 0 .. 100  (peak negative moment magnitude)
+  silence_score: number;       // 0 .. 100  (higher = more substantive, less filler)
+  interruption_risk: RiskLevel;
+  talk_listen_ratio: TalkListenRatio;
+  call_phase_sentiment: CallPhaseSentiment;
 }
 
 export interface AnalysisResult {
