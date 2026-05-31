@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { AnalysisResult } from "@/lib/types";
 import Results from "@/components/Results";
+import { saveAnalysis } from "@/lib/history";
 
 export default function Dashboard() {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed.");
       setResult(data as AnalysisResult);
+      saveAnalysis(fileName, data as AnalysisResult); // persist for the Insights view
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed.");
     } finally {

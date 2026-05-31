@@ -61,7 +61,9 @@ export default function Results({
   onReset: () => void;
 }) {
   const { overall, kpis, emotions, sentences, summary, meta } = result;
-  const [showSentences, setShowSentences] = useState(false);
+  const [showAllSentences, setShowAllSentences] = useState(false);
+  const PREVIEW = 5;
+  const visibleSentences = showAllSentences ? sentences : sentences.slice(0, PREVIEW);
 
   return (
     <div className="space-y-6">
@@ -114,33 +116,36 @@ export default function Results({
         </div>
       </div>
 
-      {/* Sentence-level sentiment — collapsible, kept near the top */}
-      <div className="rounded-2xl border border-border bg-card">
-        <button
-          onClick={() => setShowSentences((v) => !v)}
-          className="flex w-full items-center justify-between p-5 text-left"
-          aria-expanded={showSentences}
-        >
-          <span className="flex items-center text-sm font-semibold">
-            Sentence-level sentiment
-            <span className="ml-2 rounded-full bg-neutral/15 px-2 py-0.5 text-xs font-normal text-muted">
-              {sentences.length}
-            </span>
-            <InfoTip text={DEFS.sentences} />
+      {/* Sentence-level sentiment — preview first 5, expand for the rest */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-4 flex items-center text-sm font-semibold">
+          Sentence-level sentiment
+          <span className="ml-2 rounded-full bg-neutral/15 px-2 py-0.5 text-xs font-normal text-muted">
+            {sentences.length}
           </span>
-          <svg
-            className={`h-4 w-4 text-muted transition-transform ${showSentences ? "rotate-180" : ""}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden
+          <InfoTip text={DEFS.sentences} />
+        </h2>
+        <div className={showAllSentences ? "max-h-[520px] overflow-y-auto pr-1" : ""}>
+          <SentenceList sentences={visibleSentences} />
+        </div>
+        {sentences.length > PREVIEW && (
+          <button
+            onClick={() => setShowAllSentences((v) => !v)}
+            className="mt-3 flex items-center gap-1 text-sm font-medium text-brand transition hover:opacity-80"
+            aria-expanded={showAllSentences}
           >
-            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-          </svg>
-        </button>
-        {showSentences && (
-          <div className="max-h-[480px] overflow-y-auto border-t border-border p-5 pt-4">
-            <SentenceList sentences={sentences} />
-          </div>
+            {showAllSentences
+              ? "Show less"
+              : `Show all ${sentences.length} sentences`}
+            <svg
+              className={`h-4 w-4 transition-transform ${showAllSentences ? "rotate-180" : ""}`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+            </svg>
+          </button>
         )}
       </div>
 
