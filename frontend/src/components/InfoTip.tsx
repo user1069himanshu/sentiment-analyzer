@@ -11,7 +11,7 @@ export default function InfoTip({ text }: { text: string }) {
       <button
         type="button"
         aria-label={text}
-        className="ml-1 flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-muted/50 text-[9px] font-bold leading-none text-muted transition-colors hover:border-brand hover:bg-brand hover:text-white focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="ml-1 flex h-3.5 w-3.5 cursor-pointer items-center justify-center rounded-full border border-muted/50 text-[9px] font-bold leading-none text-muted transition-colors hover:border-brand hover:bg-brand hover:text-white focus:outline-none focus:ring-2 focus:ring-brand/30"
       >
         i
       </button>

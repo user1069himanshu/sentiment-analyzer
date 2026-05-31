@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { AnalysisResult } from "@/lib/types";
 import { riskBadge, sentimentBadge, titleCase } from "@/lib/ui";
 import { EmotionChart, SentimentTimeline } from "@/components/Charts";
@@ -13,18 +13,16 @@ const DEFS = {
     "The net emotional tone of the whole conversation, with the model's confidence and a short reasoning for the verdict.",
   summary:
     "A 1–2 sentence recap of the call, plus the key topics that were discussed.",
-  phase:
-    "The dominant sentiment in each third of the call — opening, middle, and closing — showing how the mood evolved.",
+  sentences:
+    "Every sentence with its individual sentiment label and detected emotion (the colored dot).",
+  timeline:
+    "Each point is one sentence's sentiment score (−1 to +1), in order, showing how tone moved through the call.",
+  emotions:
+    "The share of each detected emotion across all sentences, based on Plutchik's 10-emotion model.",
   csat:
     "Customer Satisfaction (proxy): an estimated 0–100 score of how satisfied the customer felt, inferred from tone and whether their issue was resolved. Stands in for a post-call survey.",
-  nps:
-    "Net Promoter Score (proxy): a −100 to +100 loyalty measure. Very positive customer lines count as 'promoters', negative ones as 'detractors': (promoters − detractors) ÷ total.",
   empathy:
     "How well the agent acknowledged the customer's feelings, apologized, and followed through — scored 0–100.",
-  compliance:
-    "Script adherence: did the agent greet, empathize, offer a resolution, resolve the issue, and close politely? Each step is worth 20 points.",
-  intensity:
-    "The magnitude of the most negative single moment in the call (0–100). Higher means a sharper emotional low point.",
   trend:
     "Whether the emotional tone improved, declined, or stayed flat between the first and second half of the call.",
   resolution:
@@ -35,20 +33,22 @@ const DEFS = {
     "Likelihood the call needs a supervisor, based on negative emotion and lack of resolution.",
   agentSent: "The average sentiment across all of the agent's messages.",
   customerSent: "The average sentiment across all of the customer's messages.",
+  nps:
+    "Net Promoter Score (proxy): a −100 to +100 loyalty measure. Very positive customer lines count as 'promoters', negative ones as 'detractors': (promoters − detractors) ÷ total.",
+  compliance:
+    "Script adherence: did the agent greet, empathize, offer a resolution, resolve the issue, and close politely? Each step is worth 20 points.",
+  intensity:
+    "The magnitude of the most negative single moment in the call (0–100). Higher means a sharper emotional low point.",
   interruption:
     "A proxy for people talking over each other — flags frequent, rapid speaker switching combined with a negative tone.",
+  phase:
+    "The dominant sentiment in each third of the call — opening, middle, and closing — showing how the mood evolved.",
   talkListen:
     "The share of the conversation spoken by each party, by sentence count. Industry benchmark is roughly 57% agent / 43% customer (Gong).",
   quality:
     "At-a-glance call quality bars. Green ≥70 is healthy, amber 40–69 is mixed, red <40 needs attention.",
   silence:
     "A proxy for substantive conversation vs. dead air or filler. Higher means a more substantive exchange.",
-  timeline:
-    "Each point is one sentence's sentiment score (−1 to +1), in order, showing how tone moved through the call.",
-  emotions:
-    "The share of each detected emotion across all sentences, based on Plutchik's 10-emotion model.",
-  sentences:
-    "Every sentence with its individual sentiment label and detected emotion (the colored dot).",
 } as const;
 
 export default function Results({
@@ -61,6 +61,7 @@ export default function Results({
   onReset: () => void;
 }) {
   const { overall, kpis, emotions, sentences, summary, meta } = result;
+  const [showSentences, setShowSentences] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -81,7 +82,7 @@ export default function Results({
         </button>
       </div>
 
-      {/* Overall + summary */}
+      {/* Overall + summary (core required output) */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5">
           <SectionLabel help={DEFS.overall}>Overall sentiment</SectionLabel>
@@ -113,83 +114,37 @@ export default function Results({
         </div>
       </div>
 
-      {/* Call phase sentiment */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <SectionLabel help={DEFS.phase}>Call phase sentiment</SectionLabel>
-        <div className="mt-3 grid grid-cols-3 gap-3">
-          {(["opening", "middle", "closing"] as const).map((phase) => (
-            <div key={phase} className="rounded-xl border border-border p-3 text-center">
-              <p className="text-xs text-muted mb-1">{titleCase(phase)}</p>
-              <span className={`rounded-full px-2.5 py-1 text-sm font-semibold ${sentimentBadge(kpis.call_phase_sentiment[phase])}`}>
-                {kpis.call_phase_sentiment[phase]}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Primary KPI row */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Kpi label="CSAT (proxy)" value={`${kpis.csat_proxy}`} suffix="/100" help={DEFS.csat} />
-        <Kpi label="NPS (proxy)" value={`${kpis.nps_proxy > 0 ? "+" : ""}${kpis.nps_proxy}`} suffix="/100" help={DEFS.nps} />
-        <Kpi label="Empathy" value={`${kpis.empathy_score}`} suffix="/100" help={DEFS.empathy} />
-        <Kpi label="Agent compliance" value={`${kpis.agent_compliance}`} suffix="/100" help={DEFS.compliance} />
-      </div>
-
-      {/* Secondary KPI row */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiBadge label="Sentiment trend" text={titleCase(kpis.sentiment_trend)} help={DEFS.trend} />
-        <KpiBadge label="Resolution" text={titleCase(kpis.resolution)} help={DEFS.resolution} />
-        <KpiBadge label="Churn risk" text={titleCase(kpis.churn_risk)} className={riskBadge(kpis.churn_risk)} help={DEFS.churn} />
-        <KpiBadge label="Escalation risk" text={titleCase(kpis.escalation_risk)} className={riskBadge(kpis.escalation_risk)} help={DEFS.escalation} />
-        <KpiBadge label="Agent sentiment" text={kpis.agent_sentiment ?? "—"} className={kpis.agent_sentiment ? sentimentBadge(kpis.agent_sentiment) : ""} help={DEFS.agentSent} />
-        <KpiBadge label="Customer sentiment" text={kpis.customer_sentiment ?? "—"} className={kpis.customer_sentiment ? sentimentBadge(kpis.customer_sentiment) : ""} help={DEFS.customerSent} />
-        <KpiBadge label="Interruption risk" text={titleCase(kpis.interruption_risk)} className={riskBadge(kpis.interruption_risk)} help={DEFS.interruption} />
-        <Kpi label="Emotion intensity" value={`${kpis.emotion_intensity}`} suffix="/100" help={DEFS.intensity} />
-      </div>
-
-      {/* Talk/listen ratio + quality */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <SectionLabel help={DEFS.talkListen}>Talk / listen ratio</SectionLabel>
-          <div className="mt-3 space-y-2">
-            {(["agent", "customer"] as const).map((role) => {
-              const pct = kpis.talk_listen_ratio[role];
-              return (
-                <div key={role}>
-                  <div className="mb-1 flex justify-between text-xs">
-                    <span className="font-medium">{titleCase(role)}</span>
-                    <span className="text-muted">{pct}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-border">
-                    <div
-                      className="h-2 rounded-full"
-                      style={{
-                        width: `${pct}%`,
-                        background: role === "agent" ? "var(--brand)" : "var(--positive)",
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+      {/* Sentence-level sentiment — collapsible, kept near the top */}
+      <div className="rounded-2xl border border-border bg-card">
+        <button
+          onClick={() => setShowSentences((v) => !v)}
+          className="flex w-full items-center justify-between p-5 text-left"
+          aria-expanded={showSentences}
+        >
+          <span className="flex items-center text-sm font-semibold">
+            Sentence-level sentiment
+            <span className="ml-2 rounded-full bg-neutral/15 px-2 py-0.5 text-xs font-normal text-muted">
+              {sentences.length}
+            </span>
+            <InfoTip text={DEFS.sentences} />
+          </span>
+          <svg
+            className={`h-4 w-4 text-muted transition-transform ${showSentences ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden
+          >
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+        </button>
+        {showSentences && (
+          <div className="max-h-[480px] overflow-y-auto border-t border-border p-5 pt-4">
+            <SentenceList sentences={sentences} />
           </div>
-          <p className="mt-3 text-xs text-muted">
-            Industry benchmark: Agent ~57% / Customer ~43% (Gong)
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <SectionLabel help={DEFS.quality}>Call quality indicators</SectionLabel>
-          <div className="mt-3 space-y-3">
-            <QualityBar label="Silence score" value={kpis.silence_score} help={DEFS.silence} />
-            <QualityBar label="Agent compliance" value={kpis.agent_compliance} help={DEFS.compliance} />
-            <QualityBar label="Empathy score" value={kpis.empathy_score} help={DEFS.empathy} />
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Charts */}
+      {/* Visual overview */}
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-5">
           <ChartTitle help={DEFS.timeline}>Sentiment over the call</ChartTitle>
@@ -201,11 +156,93 @@ export default function Results({
         </div>
       </div>
 
-      {/* Sentence-level */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <ChartTitle help={DEFS.sentences}>Sentence-level sentiment</ChartTitle>
-        <SentenceList sentences={sentences} />
-      </div>
+      {/* Core KPIs (the originally-defined / required metrics) */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-foreground/90">Core sentiment KPIs</h2>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <Kpi label="CSAT (proxy)" value={`${kpis.csat_proxy}`} suffix="/100" help={DEFS.csat} />
+          <Kpi label="Empathy" value={`${kpis.empathy_score}`} suffix="/100" help={DEFS.empathy} />
+          <KpiBadge label="Sentiment trend" text={titleCase(kpis.sentiment_trend)} help={DEFS.trend} />
+          <KpiBadge label="Resolution" text={titleCase(kpis.resolution)} help={DEFS.resolution} />
+          <KpiBadge label="Churn risk" text={titleCase(kpis.churn_risk)} className={riskBadge(kpis.churn_risk)} help={DEFS.churn} />
+          <KpiBadge label="Escalation risk" text={titleCase(kpis.escalation_risk)} className={riskBadge(kpis.escalation_risk)} help={DEFS.escalation} />
+          <KpiBadge label="Agent sentiment" text={kpis.agent_sentiment ?? "—"} className={kpis.agent_sentiment ? sentimentBadge(kpis.agent_sentiment) : ""} help={DEFS.agentSent} />
+          <KpiBadge label="Customer sentiment" text={kpis.customer_sentiment ?? "—"} className={kpis.customer_sentiment ? sentimentBadge(kpis.customer_sentiment) : ""} help={DEFS.customerSent} />
+        </div>
+      </section>
+
+      {/* Advanced KPIs (the additional metrics we defined) */}
+      <section className="space-y-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+          Advanced call analytics
+          <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
+            extended
+          </span>
+        </h2>
+
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <Kpi label="NPS (proxy)" value={`${kpis.nps_proxy > 0 ? "+" : ""}${kpis.nps_proxy}`} suffix="/100" help={DEFS.nps} />
+          <Kpi label="Agent compliance" value={`${kpis.agent_compliance}`} suffix="/100" help={DEFS.compliance} />
+          <Kpi label="Emotion intensity" value={`${kpis.emotion_intensity}`} suffix="/100" help={DEFS.intensity} />
+          <KpiBadge label="Interruption risk" text={titleCase(kpis.interruption_risk)} className={riskBadge(kpis.interruption_risk)} help={DEFS.interruption} />
+        </div>
+
+        {/* Call phase sentiment */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <SectionLabel help={DEFS.phase}>Call phase sentiment</SectionLabel>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            {(["opening", "middle", "closing"] as const).map((phase) => (
+              <div key={phase} className="rounded-xl border border-border p-3 text-center">
+                <p className="text-xs text-muted mb-1">{titleCase(phase)}</p>
+                <span className={`rounded-full px-2.5 py-1 text-sm font-semibold ${sentimentBadge(kpis.call_phase_sentiment[phase])}`}>
+                  {kpis.call_phase_sentiment[phase]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Talk/listen ratio + quality */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <SectionLabel help={DEFS.talkListen}>Talk / listen ratio</SectionLabel>
+            <div className="mt-3 space-y-2">
+              {(["agent", "customer"] as const).map((role) => {
+                const pct = kpis.talk_listen_ratio[role];
+                return (
+                  <div key={role}>
+                    <div className="mb-1 flex justify-between text-xs">
+                      <span className="font-medium">{titleCase(role)}</span>
+                      <span className="text-muted">{pct}%</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-border">
+                      <div
+                        className="h-2 rounded-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: role === "agent" ? "var(--brand)" : "var(--positive)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-muted">
+              Industry benchmark: Agent ~57% / Customer ~43% (Gong)
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <SectionLabel help={DEFS.quality}>Call quality indicators</SectionLabel>
+            <div className="mt-3 space-y-3">
+              <QualityBar label="Silence score" value={kpis.silence_score} help={DEFS.silence} />
+              <QualityBar label="Agent compliance" value={kpis.agent_compliance} help={DEFS.compliance} />
+              <QualityBar label="Empathy score" value={kpis.empathy_score} help={DEFS.empathy} />
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
