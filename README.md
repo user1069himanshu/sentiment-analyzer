@@ -2,7 +2,7 @@
 
 Upload a conversation transcript and get a complete AI-powered sentiment analysis, emotion breakdown, and call-center KPI dashboard — in seconds.
 
-**Live demo:** [https://frontend-theta-drab-57.vercel.app](https://frontend-theta-drab-57.vercel.app) &nbsp;|&nbsp; Login: `admin` / `admin123`
+**Live demo:** [https://sentiment-analyzer-coe.vercel.app](https://sentiment-analyzer-coe.vercel.app) &nbsp;|&nbsp; Login: `admin` / `admin123`
 
 Built for the **AI Centre of Excellence (CoE) / AI Engineer** assignment. Demonstrates clean three-layer separation (**UI → n8n → AI**), 16 contact-center KPIs, and production-grade UX.
 
@@ -106,16 +106,21 @@ cp .env.example .env.local
 ```
 
 ```env
-# Required — the n8n webhook URL that receives { text } and returns the analysis JSON
-NEXT_PUBLIC_N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/your-path
+# n8n webhook URL (primary AI path — all secrets stay server-side)
+N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/your-path
 
-# Optional — Supabase for cross-device call history
+# Auth gate credentials
+APP_USERNAME=admin
+APP_PASSWORD=admin123
+AUTH_SECRET=generate-a-long-random-string
+
+# OpenAI fallback (only used if N8N_WEBHOOK_URL is empty)
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-4o
+
+# Supabase for cross-device call history (optional — falls back to localStorage)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-
-# Optional — override default login credentials
-NEXT_PUBLIC_AUTH_USERNAME=admin
-NEXT_PUBLIC_AUTH_PASSWORD=admin123
 ```
 
 ### 3. Run locally
