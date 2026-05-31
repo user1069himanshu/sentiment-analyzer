@@ -70,9 +70,9 @@ export default function FilteredCalls() {
 
   /* ── Page title ── */
   const title =
-    kind === "sentiment"  ? "Calls by Sentiment"  :
-    kind === "resolution" ? "Calls by Resolution" :
-    kind === "topic"      ? "Calls by Topic"       : "All Calls";
+    kind === "sentiment"  ? "🎯 Calls by Sentiment"  :
+    kind === "resolution" ? "✅ Calls by FCR Status" :
+    kind === "topic"      ? "🏷️ Calls by Topic"       : "📋 All Calls";
 
   const subtitle =
     kind === "topic"
@@ -247,18 +247,18 @@ function CallCard({ a }: { a: StoredAnalysis }) {
           </span>
 
           <span className={`text-xs font-semibold ${csatColor}`}>
-            CSAT {a.result.kpis.csat_proxy}
+            ⭐ {a.result.kpis.csat_proxy}
             <span className="font-normal text-muted">/100</span>
           </span>
 
           {a.result.kpis.churn_risk === "high" && (
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${riskBadge("high")}`}>
-              Churn
+              🔒 Retention Risk
             </span>
           )}
           {a.result.kpis.escalation_risk === "high" && (
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${riskBadge("high")}`}>
-              Escalation
+              ⚡ Escalation Signal
             </span>
           )}
         </div>

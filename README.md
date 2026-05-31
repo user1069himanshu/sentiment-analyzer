@@ -49,22 +49,22 @@ Full data contract: [`docs/architecture.md`](docs/architecture.md)
 ### 16 Call-Center KPIs
 | KPI | What it measures |
 |-----|-----------------|
-| CSAT proxy | 0–100 satisfaction estimate derived from tone and resolution |
-| NPS proxy | Likelihood-to-recommend signal from conversational tone |
-| Sentiment trend | Did the call improve, decline, or stay flat? |
-| Churn risk | Low / Medium / High likelihood of customer defection |
-| Escalation risk | Probability the call needed a supervisor |
-| Resolution status | Resolved / Partial / Unresolved (first-call-resolution proxy) |
-| Empathy score | Agent warmth and acknowledgement quality |
-| Agent compliance | Adherence to expected communication standards |
-| Emotion intensity | Peak emotional weight in the conversation |
-| Silence score | Inferred gaps and dead air |
-| Interruption risk | Cross-talk and overlap signals |
-| Key topics | Auto-extracted intents and subjects |
-| Agent sentiment | Agent-only emotional tone |
-| Customer sentiment | Customer-only emotional tone |
-| Talk/listen ratio | Agent-to-customer speaking balance |
-| Call phase sentiment | Opening / middle / closing tone breakdown |
+| ⭐ Satisfaction Index | 0–100 satisfaction estimate derived from tone and resolution (CSAT proxy) |
+| 📣 Net Promoter Signal | −100 to +100 loyalty measure from promoter/detractor sentence ratio |
+| 📈 Tone Trajectory | Did the call improve, decline, or stay flat across its arc? |
+| 🔒 Retention Risk | Low / Medium / High likelihood of customer defection |
+| ⚡ Escalation Signal | Probability the call needed a supervisor |
+| ✅ FCR Status | First Contact Resolution — Resolved / Partial / Unresolved |
+| 🤝 Empathy Quotient | Agent warmth, acknowledgement, and follow-through quality |
+| 📋 Protocol Adherence | Adherence to expected communication script and standards |
+| ⚡ Peak Intensity | Magnitude of the most negative single moment in the call |
+| 💎 Engagement Depth | Substantive conversation ratio vs. dead air and filler |
+| 🔄 Overtalk Risk | Cross-talk and rapid speaker-switching signals |
+| 🏷️ Key Topics | Auto-extracted intents and subjects from the transcript |
+| 🎙️ Agent Pulse | Agent-only emotional tone across all utterances |
+| 💬 Customer Pulse | Customer-only emotional tone across all utterances |
+| ⚖️ Voice Share | Agent-to-customer speaking balance (Gong benchmark: 57/43) |
+| 🌊 Conversation Arc | Opening / middle / closing sentiment — the call's narrative arc |
 
 ### Insights Dashboard
 - Aggregate Insights view across all analyzed calls

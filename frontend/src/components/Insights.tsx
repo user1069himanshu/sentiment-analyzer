@@ -117,21 +117,21 @@ export default function Insights() {
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard icon="📞" label="Total calls"  value={`${agg.totalCalls}`} sub="across all sessions" />
+        <KpiCard icon="📞" label="Total Calls"  value={`${agg.totalCalls}`} sub="across all sessions" />
         <KpiCard
-          icon="⭐" label="Avg CSAT"
+          icon="⭐" label="Satisfaction Index"
           value={`${agg.avgCsat}`} suffix="/100"
           valueClass={csatClass}
           sub={agg.avgCsat >= 70 ? "Healthy" : agg.avgCsat >= 40 ? "Needs attention" : "Critical"}
         />
         <KpiCard
-          icon="📈" label="Avg NPS"
+          icon="📣" label="Net Promoter Signal"
           value={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}`} suffix="/100"
           valueClass={npsClass}
           sub={agg.avgNps > 30 ? "Strong loyalty" : agg.avgNps >= 0 ? "Moderate" : "At risk"}
         />
         <KpiCard
-          icon="⚠️" label="High-risk calls"
+          icon="⚠️" label="High-Risk Calls"
           value={`${agg.highRisk.length}`}
           valueClass={agg.highRisk.length > 0 ? "text-negative" : "text-positive"}
           sub={agg.highRisk.length > 0 ? "Click to review" : "All clear"}
@@ -143,7 +143,7 @@ export default function Insights() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Sentiment */}
         <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">Sentiment distribution</h2>
+          <h2 className="mb-1 text-sm font-semibold">🎯 Sentiment Breakdown</h2>
           <p className="mb-4 text-xs text-muted">Click a slice or row to open filtered view</p>
           <div className="flex items-center gap-4">
             <div className="h-44 w-44 shrink-0">
@@ -196,8 +196,8 @@ export default function Insights() {
 
         {/* Resolution */}
         <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">Resolution outcomes</h2>
-          <p className="mb-4 text-xs text-muted">Click a slice or row to open filtered view</p>
+          <h2 className="mb-1 text-sm font-semibold">✅ FCR Outcomes</h2>
+          <p className="mb-4 text-xs text-muted">First Contact Resolution — click to filter</p>
           <div className="flex items-center gap-4">
             <div className="h-44 w-44 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
@@ -252,19 +252,19 @@ export default function Insights() {
 
       {/* ── Performance averages ── */}
       <div className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-4 text-sm font-semibold">Performance averages</h2>
+        <h2 className="mb-4 text-sm font-semibold">📊 Benchmark Averages</h2>
         <div className="grid gap-5 md:grid-cols-3">
-          <PerfBar label="Avg CSAT"   value={agg.avgCsat}   display={`${agg.avgCsat}/100`} />
-          <PerfBar label="Avg NPS"    value={Math.max(0, agg.avgNps)} display={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}/100`} />
-          <PerfBar label="Avg Empathy" value={agg.avgEmpathy} display={`${agg.avgEmpathy}/100`} />
+          <PerfBar label="⭐ Satisfaction Index"  value={agg.avgCsat}   display={`${agg.avgCsat}/100`} />
+          <PerfBar label="📣 Net Promoter Signal" value={Math.max(0, agg.avgNps)} display={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}/100`} />
+          <PerfBar label="🤝 Empathy Quotient"    value={agg.avgEmpathy} display={`${agg.avgEmpathy}/100`} />
         </div>
       </div>
 
       {/* ── Top topics ── */}
       {agg.topTopics.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">Top problems &amp; topics</h2>
-          <p className="mb-4 text-xs text-muted">Click a topic to see matching calls</p>
+          <h2 className="mb-1 text-sm font-semibold">🏷️ Top Issues &amp; Topics</h2>
+          <p className="mb-4 text-xs text-muted">Auto-extracted intents — click to filter matching calls</p>
           <div className="flex flex-wrap gap-2">
             {agg.topTopics.map((t) => (
               <Link
@@ -287,7 +287,7 @@ export default function Insights() {
         <div className="rounded-2xl border border-negative/25 bg-negative/5 p-5">
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-negative">⚠️ High-risk calls</h2>
+              <h2 className="text-sm font-semibold text-negative">🚨 High-Risk Calls</h2>
               <span className="rounded-full bg-negative/10 px-2 py-0.5 text-xs font-semibold text-negative">
                 {agg.highRisk.length}
               </span>
@@ -299,7 +299,7 @@ export default function Insights() {
               View all →
             </Link>
           </div>
-          <p className="mb-4 text-xs text-muted">Negative sentiment, high churn, or escalation risk</p>
+          <p className="mb-4 text-xs text-muted">Negative sentiment + high retention risk or escalation signal</p>
           <div className="space-y-2">
             {agg.highRisk.slice(0, 5).map((a) => (
               <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm">
@@ -307,7 +307,7 @@ export default function Insights() {
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(a.result.overall.sentiment)}`}>
                   {a.result.overall.sentiment}
                 </span>
-                <span className="text-xs text-muted">CSAT {a.result.kpis.csat_proxy}</span>
+                <span className="text-xs text-muted">Sat. {a.result.kpis.csat_proxy}</span>
                 <span className="text-xs text-muted">{formatDate(a.createdAt)}</span>
               </div>
             ))}
@@ -318,7 +318,7 @@ export default function Insights() {
       {/* ── Recent calls table ── */}
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-4 text-sm font-semibold">
-          Recent calls ({Math.min(history.length, 20)} of {history.length})
+          🕐 Recent Calls ({Math.min(history.length, 20)} of {history.length})
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -326,8 +326,8 @@ export default function Insights() {
               <tr className="border-b border-border text-left text-xs text-muted">
                 <th className="pb-2 pr-3 font-medium">File</th>
                 <th className="pb-2 pr-3 font-medium">Sentiment</th>
-                <th className="pb-2 pr-3 font-medium">CSAT</th>
-                <th className="pb-2 pr-3 font-medium">Resolution</th>
+                <th className="pb-2 pr-3 font-medium">Satisfaction</th>
+                <th className="pb-2 pr-3 font-medium">FCR Status</th>
                 <th className="pb-2 font-medium">Date</th>
               </tr>
             </thead>
