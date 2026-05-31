@@ -355,11 +355,7 @@ function Kpi({
   help: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-4">
-      {/* Watermark icon */}
-      <span className="pointer-events-none absolute right-3 top-3 select-none text-3xl opacity-[0.07]">
-        {icon}
-      </span>
+    <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-1 text-xs font-medium text-muted">
         <span className="text-base leading-none">{icon}</span>
         {label}
@@ -387,10 +383,7 @@ function KpiBadge({
   className?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-4">
-      <span className="pointer-events-none absolute right-3 top-3 select-none text-3xl opacity-[0.07]">
-        {icon}
-      </span>
+    <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-1 text-xs font-medium text-muted">
         <span className="text-base leading-none">{icon}</span>
         {label}
