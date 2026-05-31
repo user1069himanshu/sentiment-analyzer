@@ -48,6 +48,38 @@ export default function Dashboard() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Restore all draft state on mount — survives navigating to Insights and back
+  useEffect(() => {
+    try {
+      const savedResult = sessionStorage.getItem("sa_draft_result");
+      const savedText   = sessionStorage.getItem("sa_draft_text");
+      const savedName   = sessionStorage.getItem("sa_draft_filename");
+      if (savedResult) setResult(JSON.parse(savedResult));
+      if (savedText)   { setText(savedText); setFileName(savedName || null); }
+    } catch {}
+  }, []);
+
+  // Persist result so it survives route changes
+  useEffect(() => {
+    try {
+      if (result) sessionStorage.setItem("sa_draft_result", JSON.stringify(result));
+      else        sessionStorage.removeItem("sa_draft_result");
+    } catch {}
+  }, [result]);
+
+  // Persist loaded file/text
+  useEffect(() => {
+    try {
+      if (text) {
+        sessionStorage.setItem("sa_draft_text",     text);
+        sessionStorage.setItem("sa_draft_filename", fileName ?? "");
+      } else {
+        sessionStorage.removeItem("sa_draft_text");
+        sessionStorage.removeItem("sa_draft_filename");
+      }
+    } catch {}
+  }, [text, fileName]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -113,16 +145,29 @@ export default function Dashboard() {
     }
   }
 
-  function reset() {
+  // Back to starting page — clears result but keeps the loaded file
+  function backToUpload() {
+    setResult(null);
+    setError(null);
+    try { sessionStorage.removeItem("sa_draft_result"); } catch {}
+  }
+
+  // Fully clear everything (used by the "Remove file" button)
+  function clearFile() {
     setResult(null);
     setFileName(null);
     setText("");
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
+    try {
+      sessionStorage.removeItem("sa_draft_result");
+      sessionStorage.removeItem("sa_draft_text");
+      sessionStorage.removeItem("sa_draft_filename");
+    } catch {}
   }
 
   if (result) {
-    return <Results result={result} fileName={fileName} onReset={reset} />;
+    return <Results result={result} fileName={fileName} onReset={backToUpload} />;
   }
 
   if (loading) {
@@ -131,44 +176,51 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {/* Hero */}
+      {/* ── Hero ── */}
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-3xl">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand/20 to-brand/5 text-3xl shadow-inner">
           🎙️
         </div>
-        <h1 className="text-3xl font-bold">Call Sentiment Analyzer</h1>
-        <p className="mt-2 text-muted">
+        <h1 className="text-3xl font-bold tracking-tight">Call Sentiment Analyzer</h1>
+        <p className="mt-2 text-muted max-w-md mx-auto">
           Upload a conversation transcript and get AI-powered sentiment analysis, emotion
           detection, and 16 call-center KPIs in seconds.
         </p>
       </div>
 
-      {/* Feature pills */}
+      {/* ── Feature pills ── */}
       <div className="mb-8 flex flex-wrap justify-center gap-2">
-        {["Overall sentiment", "Emotion detection", "CSAT & NPS", "Agent compliance", "Churn risk", "Call arc"].map((f) => (
-          <span key={f} className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted">
-            ✓ {f}
+        {[
+          { icon: "💬", label: "Overall sentiment" },
+          { icon: "😊", label: "Emotion detection" },
+          { icon: "⭐", label: "CSAT & NPS" },
+          { icon: "✅", label: "Agent compliance" },
+          { icon: "⚠️", label: "Churn risk" },
+          { icon: "📈", label: "Call arc" },
+        ].map((f) => (
+          <span key={f.label} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted">
+            <span>{f.icon}</span>{f.label}
           </span>
         ))}
       </div>
 
-      {/* Tab switcher */}
+      {/* ── Tab switcher ── */}
       <div className="mb-4 flex rounded-xl border border-border bg-card p-1">
         <button
           onClick={() => setActiveTab("upload")}
           className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${activeTab === "upload" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"}`}
         >
-          Upload a file
+          📄 Upload a file
         </button>
         <button
           onClick={() => setActiveTab("samples")}
           className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${activeTab === "samples" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"}`}
         >
-          Try sample calls ({SAMPLE_CALLS.length})
+          🎧 Sample calls ({SAMPLE_CALLS.length})
         </button>
       </div>
 
-      {/* Upload tab */}
+      {/* ── Upload tab ── */}
       {activeTab === "upload" && (
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -180,32 +232,34 @@ export default function Dashboard() {
             if (f) readFile(f);
           }}
           onClick={() => !fileName && inputRef.current?.click()}
-          className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all ${
+          className={`relative rounded-2xl border-2 border-dashed p-12 text-center transition-all ${
             dragging
-              ? "border-brand bg-brand/5 scale-[1.01]"
+              ? "cursor-copy border-brand bg-brand/5 scale-[1.01]"
               : fileName
-              ? "border-brand/40 bg-brand/5 cursor-default"
-              : "border-border bg-card hover:border-brand hover:bg-brand/5"
+              ? "cursor-default border-positive/40 bg-positive/5"
+              : "cursor-pointer border-border bg-card hover:border-brand hover:bg-brand/5"
           }`}
         >
           {fileName ? (
             <div>
-              <div className="mb-2 text-4xl">✅</div>
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-positive/10 text-3xl">✅</div>
               <p className="font-semibold text-foreground">{fileName}</p>
               <p className="mt-1 text-sm text-muted">{text.length.toLocaleString()} characters · ready to analyze</p>
               <button
-                onClick={(e) => { e.stopPropagation(); reset(); }}
-                className="mt-3 text-xs text-muted underline hover:text-negative"
+                onClick={(e) => { e.stopPropagation(); clearFile(); }}
+                className="mt-3 text-xs text-muted underline transition hover:text-negative"
               >
                 Remove file
               </button>
             </div>
           ) : (
             <div>
-              <div className="mb-3 text-5xl">{dragging ? "📂" : "📄"}</div>
-              <p className="font-semibold">{dragging ? "Drop it here" : "Drop a .txt file or click to browse"}</p>
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 text-3xl">
+                {dragging ? "📂" : "📄"}
+              </div>
+              <p className="font-semibold">{dragging ? "Drop it here!" : "Drop a .txt file or click to browse"}</p>
               <p className="mt-1 text-sm text-muted">Accepts plain text conversation transcripts</p>
-              <p className="mt-3 inline-block rounded-lg bg-brand/10 px-3 py-1 text-xs font-medium text-brand">
+              <p className="mt-4 inline-block rounded-lg border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-medium text-brand">
                 Format: "Agent: …" / "Customer: …" per line
               </p>
             </div>
@@ -223,15 +277,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Samples tab */}
+      {/* ── Samples tab ── */}
       {activeTab === "samples" && (
         <div className="grid gap-3 sm:grid-cols-2">
           {SAMPLE_CALLS.map((s) => (
             <button
               key={s.id}
               onClick={() => loadSampleCall(s)}
-              className={`rounded-xl border p-4 text-left transition hover:border-brand hover:bg-brand/5 ${
-                fileName === `${s.title}.txt` ? "border-brand bg-brand/5" : "border-border bg-card"
+              className={`rounded-xl border p-4 text-left transition hover:border-brand hover:bg-brand/5 hover:shadow-sm ${
+                fileName === `${s.title}.txt` ? "border-brand bg-brand/5 shadow-sm" : "border-border bg-card"
               }`}
             >
               <div className="flex items-start gap-3">

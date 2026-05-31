@@ -13,7 +13,9 @@ export default function DashboardNav() {
   return (
     <nav className="flex items-center gap-1">
       {LINKS.map((l) => {
-        const active = pathname === l.href;
+        const active = l.href === "/dashboard"
+          ? pathname === l.href
+          : pathname.startsWith(l.href);
         return (
           <Link
             key={l.href}

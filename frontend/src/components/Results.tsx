@@ -65,38 +65,51 @@ export default function Results({
   const PREVIEW = 5;
   const visibleSentences = showAllSentences ? sentences : sentences.slice(0, PREVIEW);
 
+  const accentColor =
+    overall.sentiment === "Positive" ? "var(--positive)" :
+    overall.sentiment === "Negative" ? "var(--negative)" : "var(--neutral)";
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Analysis results</h1>
-          <p className="text-sm text-muted">
-            {fileName ?? "conversation"} · {meta.sentence_count} sentences ·{" "}
-            <span className="font-mono">{meta.source}</span> · {meta.model}
-          </p>
+      {/* ── Sentiment accent banner ── */}
+      <div
+        className="rounded-2xl p-4"
+        style={{ background: `color-mix(in srgb, ${accentColor} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${accentColor} 25%, transparent)` }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">
+              {overall.sentiment === "Positive" ? "😊" : overall.sentiment === "Negative" ? "😠" : "😐"}
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold">
+                  {overall.sentiment} call
+                </h1>
+                <span className="text-sm text-muted">
+                  · score {overall.score.toFixed(2)} · {Math.round(overall.confidence * 100)}% confidence
+                </span>
+              </div>
+              <p className="text-sm text-muted">
+                {fileName ?? "conversation"} · {meta.sentence_count} sentences ·{" "}
+                <span className="font-mono text-xs">{meta.source}</span> · {meta.model}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onReset}
+            className="rounded-lg border border-border bg-card/80 px-4 py-2 text-sm font-medium transition hover:bg-card"
+          >
+            ← Back
+          </button>
         </div>
-        <button
-          onClick={onReset}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-card"
-        >
-          Analyze another
-        </button>
       </div>
 
-      {/* Overall + summary (core required output) */}
+      {/* Summary + reasoning */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5">
-          <SectionLabel help={DEFS.overall}>Overall sentiment</SectionLabel>
-          <div className="mt-2 flex items-center gap-3">
-            <span className={`rounded-full px-3 py-1 text-lg font-semibold ${sentimentBadge(overall.sentiment)}`}>
-              {overall.sentiment}
-            </span>
-            <span className="text-sm text-muted">
-              score {overall.score.toFixed(2)} · {Math.round(overall.confidence * 100)}% conf.
-            </span>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-foreground/80">
+          <SectionLabel help={DEFS.overall}>AI reasoning</SectionLabel>
+          <p className="mt-2 text-sm leading-relaxed text-foreground/80">
             {overall.reasoning}
           </p>
         </div>
