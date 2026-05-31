@@ -10,7 +10,7 @@ import InfoTip from "@/components/InfoTip";
 /* ─────────────────────────── KPI definitions ─────────────────────────── */
 const DEFS = {
   overall:
-    "The net emotional tone of the whole conversation, with the model's confidence and a short reasoning for the verdict.",
+    "The model's chain-of-thought justification for its sentiment verdict — why this call scored Positive, Negative, or Neutral.",
   summary:
     "A 1–2 sentence recap of the call, plus the key topics that were discussed.",
   sentences:
@@ -127,7 +127,7 @@ export default function Results({
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5">
           <SectionLabel help={DEFS.overall}>
-            <span className="mr-1.5">🧠</span> AI Reasoning
+            <span className="mr-1.5">🧠</span> Verdict Rationale
           </SectionLabel>
           <p className="mt-2 text-sm leading-relaxed text-foreground/80">
             {overall.reasoning}
