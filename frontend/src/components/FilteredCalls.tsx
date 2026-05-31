@@ -253,7 +253,7 @@ function CallCard({ a }: { a: StoredAnalysis }) {
 
           {a.result.kpis.churn_risk === "high" && (
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${riskBadge("high")}`}>
-              🔒 Retention Risk
+              🔒 Churn Risk
             </span>
           )}
           {a.result.kpis.escalation_risk === "high" && (

@@ -13,6 +13,8 @@ import {
 } from "@/lib/history";
 import { sentimentBadge } from "@/lib/ui";
 
+type Tab = "overview" | "issues" | "history";
+
 /* ── Colour maps ── */
 const SENTIMENT_COLORS: Record<string, string> = {
   Positive: "var(--positive)",
@@ -25,13 +27,13 @@ const RESOLUTION_COLORS: Record<string, string> = {
   Unresolved: "var(--negative)",
 };
 
-/* ── Helper: build the filtered-calls URL ── */
 function filterUrl(kind: string, value: string) {
   return `/dashboard/insights/calls?kind=${encodeURIComponent(kind)}&value=${encodeURIComponent(value)}`;
 }
 
 export default function Insights() {
   const router = useRouter();
+  const [tab, setTab]       = useState<Tab>("overview");
   const [history, setHistory] = useState<StoredAnalysis[]>([]);
   const [ready,   setReady]   = useState(false);
 
@@ -48,7 +50,6 @@ export default function Insights() {
     }
   }
 
-  /* ── Loading ── */
   if (!ready) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -57,7 +58,6 @@ export default function Insights() {
     );
   }
 
-  /* ── Empty state ── */
   if (history.length === 0) {
     return (
       <div className="mx-auto max-w-md py-20 text-center">
@@ -66,8 +66,7 @@ export default function Insights() {
         </div>
         <h1 className="text-xl font-semibold">No calls analyzed yet</h1>
         <p className="mt-2 text-sm text-muted">
-          Analyze a conversation and it will appear here automatically, building an aggregate view
-          across all your calls.
+          Analyze a conversation and it will appear here automatically.
         </p>
         <Link
           href="/dashboard"
@@ -92,295 +91,287 @@ export default function Insights() {
     { name: "Unresolved", value: agg.resolutionCounts.unresolved  },
   ].filter((d) => d.value > 0);
 
-  const csatClass =
-    agg.avgCsat >= 70 ? "text-positive" : agg.avgCsat >= 40 ? "text-amber-500" : "text-negative";
-  const npsClass =
-    agg.avgNps > 0 ? "text-positive" : agg.avgNps < 0 ? "text-negative" : "text-muted";
+  const csatClass  = agg.avgCsat >= 70 ? "text-positive" : agg.avgCsat >= 40 ? "text-amber-500" : "text-negative";
+  const npsClass   = agg.avgNps  >  0  ? "text-positive" : agg.avgNps  <  0  ? "text-negative"  : "text-muted";
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-3">
+
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">Insights Dashboard</h1>
-          <p className="text-sm text-muted">
-            {agg.totalCalls} {agg.totalCalls === 1 ? "call" : "calls"} analyzed
-          </p>
+          <h1 className="text-xl font-semibold">Insights Dashboard</h1>
+          <p className="text-sm text-muted">{agg.totalCalls} {agg.totalCalls === 1 ? "call" : "calls"} analyzed</p>
         </div>
         <button
           onClick={onClear}
-          className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted transition hover:border-negative hover:text-negative"
+          className="rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:border-negative hover:text-negative"
         >
           Clear history
         </button>
       </div>
 
-      {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard icon="📞" label="Total Calls"  value={`${agg.totalCalls}`} sub="across all sessions" />
-        <KpiCard
-          icon="⭐" label="Satisfaction Index"
-          value={`${agg.avgCsat}`} suffix="/100"
-          valueClass={csatClass}
-          sub={agg.avgCsat >= 70 ? "Healthy" : agg.avgCsat >= 40 ? "Needs attention" : "Critical"}
-        />
-        <KpiCard
-          icon="📣" label="Net Promoter Signal"
-          value={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}`} suffix="/100"
-          valueClass={npsClass}
-          sub={agg.avgNps > 30 ? "Strong loyalty" : agg.avgNps >= 0 ? "Moderate" : "At risk"}
-        />
-        <KpiCard
-          icon="⚠️" label="High-Risk Calls"
-          value={`${agg.highRisk.length}`}
-          valueClass={agg.highRisk.length > 0 ? "text-negative" : "text-positive"}
-          sub={agg.highRisk.length > 0 ? "Click to review" : "All clear"}
-          href={agg.highRisk.length > 0 ? filterUrl("sentiment", "Negative") : undefined}
-        />
-      </div>
-
-      {/* ── Donut charts ── */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Sentiment */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">🎯 Sentiment Breakdown</h2>
-          <p className="mb-4 text-xs text-muted">Click a slice or row to open filtered view</p>
-          <div className="flex items-center gap-4">
-            <div className="h-44 w-44 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sentimentData}
-                    cx="50%" cy="50%"
-                    innerRadius={42} outerRadius={68}
-                    paddingAngle={3} dataKey="value"
-                    onClick={(d) => d?.name && router.push(filterUrl("sentiment", d.name))}
-                    className="cursor-pointer"
-                  >
-                    {sentimentData.map((d) => (
-                      <Cell key={d.name} fill={SENTIMENT_COLORS[d.name]} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
-                    formatter={(value, name) => [`${value} calls`, name]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              {[
-                { label: "Positive", value: agg.sentimentCounts.Positive },
-                { label: "Neutral",  value: agg.sentimentCounts.Neutral  },
-                { label: "Negative", value: agg.sentimentCounts.Negative },
-              ].map((item) => {
-                const pct = agg.totalCalls ? Math.round((item.value / agg.totalCalls) * 100) : 0;
-                return (
-                  <Link
-                    key={item.label}
-                    href={filterUrl("sentiment", item.label)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition ${
-                      item.value > 0 ? "hover:bg-background" : "pointer-events-none opacity-40"
-                    }`}
-                  >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SENTIMENT_COLORS[item.label] }} />
-                    <span className="flex-1 font-medium">{item.label}</span>
-                    <span className="text-muted">{item.value}</span>
-                    <span className="w-8 text-right font-semibold">{pct}%</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Resolution */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">✅ FCR Outcomes</h2>
-          <p className="mb-4 text-xs text-muted">First Contact Resolution — click to filter</p>
-          <div className="flex items-center gap-4">
-            <div className="h-44 w-44 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={resolutionData}
-                    cx="50%" cy="50%"
-                    innerRadius={42} outerRadius={68}
-                    paddingAngle={3} dataKey="value"
-                    onClick={(d) => {
-                      if (d?.name) router.push(filterUrl("resolution", d.name.toLowerCase()));
-                    }}
-                    className="cursor-pointer"
-                  >
-                    {resolutionData.map((d) => (
-                      <Cell key={d.name} fill={RESOLUTION_COLORS[d.name]} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
-                    formatter={(value, name) => [`${value} calls`, name]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              {[
-                { label: "Resolved",   key: "resolved",   value: agg.resolutionCounts.resolved   },
-                { label: "Partial",    key: "partial",    value: agg.resolutionCounts.partial     },
-                { label: "Unresolved", key: "unresolved", value: agg.resolutionCounts.unresolved  },
-              ].map((item) => {
-                const pct = agg.totalCalls ? Math.round((item.value / agg.totalCalls) * 100) : 0;
-                return (
-                  <Link
-                    key={item.key}
-                    href={filterUrl("resolution", item.key)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition ${
-                      item.value > 0 ? "hover:bg-background" : "pointer-events-none opacity-40"
-                    }`}
-                  >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: RESOLUTION_COLORS[item.label] }} />
-                    <span className="flex-1 font-medium">{item.label}</span>
-                    <span className="text-muted">{item.value}</span>
-                    <span className="w-8 text-right font-semibold">{pct}%</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Performance averages ── */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-4 text-sm font-semibold">📊 Benchmark Averages</h2>
-        <div className="grid gap-5 md:grid-cols-3">
-          <PerfBar label="⭐ Satisfaction Index"  value={agg.avgCsat}   display={`${agg.avgCsat}/100`} />
-          <PerfBar label="📣 Net Promoter Signal" value={Math.max(0, agg.avgNps)} display={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}/100`} />
-          <PerfBar label="🤝 Empathy Quotient"    value={agg.avgEmpathy} display={`${agg.avgEmpathy}/100`} />
-        </div>
-      </div>
-
-      {/* ── Top topics ── */}
-      {agg.topTopics.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 text-sm font-semibold">🏷️ Top Issues &amp; Topics</h2>
-          <p className="mb-4 text-xs text-muted">Auto-extracted intents — click to filter matching calls</p>
-          <div className="flex flex-wrap gap-2">
-            {agg.topTopics.map((t) => (
-              <Link
-                key={t.topic}
-                href={filterUrl("topic", t.topic)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium capitalize transition hover:border-brand hover:bg-brand/5 hover:text-brand"
-              >
-                {t.topic}
-                <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-xs font-semibold leading-none text-brand">
-                  {t.count}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── High-risk calls ── */}
-      {agg.highRisk.length > 0 && (
-        <div className="rounded-2xl border border-negative/25 bg-negative/5 p-5">
-          <div className="mb-1 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-negative">🚨 High-Risk Calls</h2>
-              <span className="rounded-full bg-negative/10 px-2 py-0.5 text-xs font-semibold text-negative">
-                {agg.highRisk.length}
-              </span>
-            </div>
-            <Link
-              href={filterUrl("sentiment", "Negative")}
-              className="text-xs text-muted transition hover:text-negative"
+      {/* ── Tab bar ── */}
+      <div className="flex gap-1 rounded-xl border border-border bg-card p-1">
+        {(["overview", "issues", "history"] as Tab[]).map((t, i) => {
+          const labels = ["📊 Overview", "🏷️ Issues", "🕐 History"];
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
+                tab === t ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"
+              }`}
             >
-              View all →
-            </Link>
+              {labels[i]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ══════════════ TAB: OVERVIEW ══════════════ */}
+      {tab === "overview" && (
+        <div className="grid gap-3">
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <KpiCard icon="📞" label="Total Calls"          value={`${agg.totalCalls}`} sub="across all sessions" />
+            <KpiCard icon="⭐" label="Satisfaction Index"   value={`${agg.avgCsat}`}    suffix="/100" valueClass={csatClass}
+              sub={agg.avgCsat >= 70 ? "Healthy" : agg.avgCsat >= 40 ? "Needs attention" : "Critical"} />
+            <KpiCard icon="📣" label="Net Promoter Signal"  value={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}`} suffix="/100" valueClass={npsClass}
+              sub={agg.avgNps > 30 ? "Strong loyalty" : agg.avgNps >= 0 ? "Moderate" : "At risk"} />
+            <KpiCard icon="⚠️" label="High-Risk Calls"      value={`${agg.highRisk.length}`}
+              valueClass={agg.highRisk.length > 0 ? "text-negative" : "text-positive"}
+              sub={agg.highRisk.length > 0 ? "Click to review" : "All clear"}
+              href={agg.highRisk.length > 0 ? filterUrl("sentiment", "Negative") : undefined} />
           </div>
-          <p className="mb-4 text-xs text-muted">Negative sentiment + high retention risk or escalation signal</p>
-          <div className="space-y-2">
-            {agg.highRisk.slice(0, 5).map((a) => (
-              <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm">
-                <span className="min-w-0 flex-1 truncate font-medium">{a.fileName}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(a.result.overall.sentiment)}`}>
-                  {a.result.overall.sentiment}
-                </span>
-                <span className="text-xs text-muted">Sat. {a.result.kpis.csat_proxy}</span>
-                <span className="text-xs text-muted">{formatDate(a.createdAt)}</span>
+
+          {/* Donut charts */}
+          <div className="grid gap-3 md:grid-cols-2">
+            {/* Sentiment Breakdown */}
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="mb-0.5 text-sm font-semibold">🎯 Sentiment Breakdown</h2>
+              <p className="mb-3 text-xs text-muted">Click a slice or row to filter</p>
+              <div className="flex items-center gap-4">
+                <div className="h-36 w-36 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={sentimentData} cx="50%" cy="50%" innerRadius={36} outerRadius={56}
+                        paddingAngle={3} dataKey="value"
+                        onClick={(d) => d?.name && router.push(filterUrl("sentiment", d.name))}
+                        className="cursor-pointer">
+                        {sentimentData.map((d) => <Cell key={d.name} fill={SENTIMENT_COLORS[d.name]} stroke="none" />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
+                        formatter={(v, n) => [`${v} calls`, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 space-y-1">
+                  {[
+                    { label: "Positive", value: agg.sentimentCounts.Positive },
+                    { label: "Neutral",  value: agg.sentimentCounts.Neutral  },
+                    { label: "Negative", value: agg.sentimentCounts.Negative },
+                  ].map((item) => {
+                    const pct = agg.totalCalls ? Math.round((item.value / agg.totalCalls) * 100) : 0;
+                    return (
+                      <Link key={item.label} href={filterUrl("sentiment", item.label)}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition ${item.value > 0 ? "hover:bg-background" : "pointer-events-none opacity-40"}`}>
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SENTIMENT_COLORS[item.label] }} />
+                        <span className="flex-1 font-medium">{item.label}</span>
+                        <span className="text-muted">{item.value}</span>
+                        <span className="w-8 text-right font-semibold">{pct}%</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* FCR Outcomes */}
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="mb-0.5 text-sm font-semibold">✅ FCR Outcomes</h2>
+              <p className="mb-3 text-xs text-muted">First Contact Resolution — click to filter</p>
+              <div className="flex items-center gap-4">
+                <div className="h-36 w-36 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={resolutionData} cx="50%" cy="50%" innerRadius={36} outerRadius={56}
+                        paddingAngle={3} dataKey="value"
+                        onClick={(d) => { if (d?.name) router.push(filterUrl("resolution", d.name.toLowerCase())); }}
+                        className="cursor-pointer">
+                        {resolutionData.map((d) => <Cell key={d.name} fill={RESOLUTION_COLORS[d.name]} stroke="none" />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
+                        formatter={(v, n) => [`${v} calls`, n]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 space-y-1">
+                  {[
+                    { label: "Resolved",   key: "resolved",   value: agg.resolutionCounts.resolved   },
+                    { label: "Partial",    key: "partial",    value: agg.resolutionCounts.partial     },
+                    { label: "Unresolved", key: "unresolved", value: agg.resolutionCounts.unresolved  },
+                  ].map((item) => {
+                    const pct = agg.totalCalls ? Math.round((item.value / agg.totalCalls) * 100) : 0;
+                    return (
+                      <Link key={item.key} href={filterUrl("resolution", item.key)}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition ${item.value > 0 ? "hover:bg-background" : "pointer-events-none opacity-40"}`}>
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: RESOLUTION_COLORS[item.label] }} />
+                        <span className="flex-1 font-medium">{item.label}</span>
+                        <span className="text-muted">{item.value}</span>
+                        <span className="w-8 text-right font-semibold">{pct}%</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Benchmark Averages */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <h2 className="mb-3 text-sm font-semibold">📊 Benchmark Averages</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              <PerfBar label="⭐ Satisfaction Index"  value={agg.avgCsat}              display={`${agg.avgCsat}/100`} />
+              <PerfBar label="📣 Net Promoter Signal" value={Math.max(0, agg.avgNps)}  display={`${agg.avgNps > 0 ? "+" : ""}${agg.avgNps}/100`} />
+              <PerfBar label="🤝 Empathy Quotient"    value={agg.avgEmpathy}           display={`${agg.avgEmpathy}/100`} />
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Recent calls table ── */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-4 text-sm font-semibold">
-          🕐 Recent Calls ({Math.min(history.length, 20)} of {history.length})
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="pb-2 pr-3 font-medium">File</th>
-                <th className="pb-2 pr-3 font-medium">Sentiment</th>
-                <th className="pb-2 pr-3 font-medium">Satisfaction</th>
-                <th className="pb-2 pr-3 font-medium">FCR Status</th>
-                <th className="pb-2 font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.slice(0, 20).map((a, i) => (
-                <tr key={a.id} className={`border-b border-border/40 last:border-0 ${i % 2 !== 0 ? "bg-background/50" : ""}`}>
-                  <td className="max-w-[180px] truncate py-2.5 pr-3 font-medium" title={a.fileName}>
-                    {isHighRisk(a) && <span className="mr-1 text-negative" title="High risk">⚠</span>}
-                    {a.fileName}
-                  </td>
-                  <td className="py-2.5 pr-3">
+      {/* ══════════════ TAB: ISSUES ══════════════ */}
+      {tab === "issues" && (
+        <div className="grid gap-3">
+          {/* Top Issues & Topics */}
+          {agg.topTopics.length > 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="mb-0.5 text-sm font-semibold">🏷️ Top Issues &amp; Topics</h2>
+              <p className="mb-3 text-xs text-muted">Auto-extracted intents — click to filter matching calls</p>
+              <div className="flex flex-wrap gap-2">
+                {agg.topTopics.map((t) => (
+                  <Link key={t.topic} href={filterUrl("topic", t.topic)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium capitalize transition hover:border-brand hover:bg-brand/5 hover:text-brand">
+                    {t.topic}
+                    <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-xs font-semibold leading-none text-brand">
+                      {t.count}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted">
+              No topics extracted yet. Analyze more calls.
+            </div>
+          )}
+
+          {/* High-Risk Calls */}
+          {agg.highRisk.length > 0 ? (
+            <div className="rounded-2xl border border-negative/25 bg-negative/5 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-negative">🚨 High-Risk Calls</h2>
+                  <span className="rounded-full bg-negative/10 px-2 py-0.5 text-xs font-semibold text-negative">
+                    {agg.highRisk.length}
+                  </span>
+                </div>
+                <Link href={filterUrl("sentiment", "Negative")} className="text-xs text-muted transition hover:text-negative">
+                  View all →
+                </Link>
+              </div>
+              <p className="mb-3 text-xs text-muted">Negative sentiment + high churn or escalation signal</p>
+              <div className="space-y-2">
+                {agg.highRisk.slice(0, 6).map((a) => (
+                  <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate font-medium">{a.fileName}</span>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(a.result.overall.sentiment)}`}>
                       {a.result.overall.sentiment}
                     </span>
-                  </td>
-                  <td className="py-2.5 pr-3">
-                    <span className={`font-semibold ${a.result.kpis.csat_proxy >= 70 ? "text-positive" : a.result.kpis.csat_proxy >= 40 ? "text-amber-500" : "text-negative"}`}>
-                      {a.result.kpis.csat_proxy}
-                    </span>
-                    <span className="text-xs text-muted">/100</span>
-                  </td>
-                  <td className="py-2.5 pr-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
-                      a.result.kpis.resolution === "resolved"   ? "bg-positive/10 text-positive" :
-                      a.result.kpis.resolution === "partial"    ? "bg-amber-100 text-amber-700"  :
-                      "bg-negative/10 text-negative"
-                    }`}>
-                      {a.result.kpis.resolution}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap py-2.5 text-xs text-muted">{formatDate(a.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <span className="text-xs text-muted">Sat. {a.result.kpis.csat_proxy}</span>
+                    <span className="text-xs text-muted">{formatDate(a.createdAt)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-positive/25 bg-positive/5 p-6 text-center">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="text-sm font-medium text-positive">No high-risk calls</p>
+              <p className="text-xs text-muted mt-1">All analyzed calls are within acceptable risk thresholds.</p>
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* ══════════════ TAB: HISTORY ══════════════ */}
+      {tab === "history" && (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <h2 className="mb-3 text-sm font-semibold">
+            🕐 Recent Calls
+            <span className="ml-2 text-xs font-normal text-muted">
+              {Math.min(history.length, 20)} of {history.length}
+            </span>
+          </h2>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card">
+                <tr className="border-b border-border text-left text-xs text-muted">
+                  <th className="pb-2 pr-3 font-medium">File</th>
+                  <th className="pb-2 pr-3 font-medium">Sentiment</th>
+                  <th className="pb-2 pr-3 font-medium">Satisfaction</th>
+                  <th className="pb-2 pr-3 font-medium">FCR Status</th>
+                  <th className="pb-2 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.slice(0, 20).map((a, i) => (
+                  <tr key={a.id} className={`border-b border-border/40 last:border-0 ${i % 2 !== 0 ? "bg-background/50" : ""}`}>
+                    <td className="max-w-[160px] truncate py-2.5 pr-3 font-medium" title={a.fileName}>
+                      {isHighRisk(a) && <span className="mr-1 text-negative" title="High risk">⚠</span>}
+                      {a.fileName}
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(a.result.overall.sentiment)}`}>
+                        {a.result.overall.sentiment}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <span className={`font-semibold ${a.result.kpis.csat_proxy >= 70 ? "text-positive" : a.result.kpis.csat_proxy >= 40 ? "text-amber-500" : "text-negative"}`}>
+                        {a.result.kpis.csat_proxy}
+                      </span>
+                      <span className="text-xs text-muted">/100</span>
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
+                        a.result.kpis.resolution === "resolved" ? "bg-positive/10 text-positive" :
+                        a.result.kpis.resolution === "partial"  ? "bg-amber-100 text-amber-700"  :
+                        "bg-negative/10 text-negative"}`}>
+                        {a.result.kpis.resolution}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap py-2.5 text-xs text-muted">{formatDate(a.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ── Sub-components ── */
+/* ─────────────────────────── Sub-components ─────────────────────────── */
 
-function KpiCard({
-  icon, label, value, suffix, sub, valueClass = "", href,
-}: {
+function KpiCard({ icon, label, value, suffix, sub, valueClass = "", href }: {
   icon: string; label: string; value: string;
   suffix?: string; sub?: string; valueClass?: string; href?: string;
 }) {
   const cls = `rounded-2xl border border-border bg-card p-4 ${href ? "cursor-pointer transition hover:border-brand hover:shadow-sm" : ""}`;
   const inner = (
     <>
-      <div className="mb-2 flex items-center gap-1.5">
+      <div className="mb-1.5 flex items-center gap-1.5">
         <span className="text-base leading-none">{icon}</span>
         <span className="text-xs font-medium text-muted">{label}</span>
       </div>
@@ -391,7 +382,9 @@ function KpiCard({
       {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
     </>
   );
-  return href ? <Link href={href} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>;
+  return href
+    ? <Link href={href} className={cls}>{inner}</Link>
+    : <div className={cls}>{inner}</div>;
 }
 
 function PerfBar({ label, value, display }: { label: string; value: number; display: string }) {
@@ -411,6 +404,5 @@ function PerfBar({ label, value, display }: { label: string; value: number; disp
 }
 
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }

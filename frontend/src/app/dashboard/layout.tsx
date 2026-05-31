@@ -20,7 +20,7 @@ export default function DashboardLayout({
           <LogoutButton />
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-5">{children}</main>
     </div>
   );
 }

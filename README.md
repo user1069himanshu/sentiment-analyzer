@@ -52,7 +52,7 @@ Full data contract: [`docs/architecture.md`](docs/architecture.md)
 | ⭐ Satisfaction Index | 0–100 satisfaction estimate derived from tone and resolution (CSAT proxy) |
 | 📣 Net Promoter Signal | −100 to +100 loyalty measure from promoter/detractor sentence ratio |
 | 📈 Tone Trajectory | Did the call improve, decline, or stay flat across its arc? |
-| 🔒 Retention Risk | Low / Medium / High likelihood of customer defection |
+| 🔒 Churn Risk | Low / Medium / High likelihood of customer defection |
 | ⚡ Escalation Signal | Probability the call needed a supervisor |
 | ✅ FCR Status | First Contact Resolution — Resolved / Partial / Unresolved |
 | 🤝 Empathy Quotient | Agent warmth, acknowledgement, and follow-through quality |
