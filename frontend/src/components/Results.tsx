@@ -185,14 +185,13 @@ export default function Results({
           </span>
         </h2>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {/* 1. NPS + Agent compliance — top business outcomes */}
+        <div className="grid grid-cols-2 gap-4">
           <Kpi label="NPS (proxy)" value={`${kpis.nps_proxy > 0 ? "+" : ""}${kpis.nps_proxy}`} suffix="/100" help={DEFS.nps} />
           <Kpi label="Agent compliance" value={`${kpis.agent_compliance}`} suffix="/100" help={DEFS.compliance} />
-          <Kpi label="Emotion intensity" value={`${kpis.emotion_intensity}`} suffix="/100" help={DEFS.intensity} />
-          <KpiBadge label="Interruption risk" text={titleCase(kpis.interruption_risk)} className={riskBadge(kpis.interruption_risk)} help={DEFS.interruption} />
         </div>
 
-        {/* Call phase sentiment */}
+        {/* 2. Call phase sentiment — narrative arc */}
         <div className="rounded-2xl border border-border bg-card p-5">
           <SectionLabel help={DEFS.phase}>Call phase sentiment</SectionLabel>
           <div className="mt-3 grid grid-cols-3 gap-3">
@@ -207,7 +206,7 @@ export default function Results({
           </div>
         </div>
 
-        {/* Talk/listen ratio + quality */}
+        {/* 3. Talk/listen ratio + quality bars — coaching signals */}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border bg-card p-5">
             <SectionLabel help={DEFS.talkListen}>Talk / listen ratio</SectionLabel>
@@ -241,11 +240,17 @@ export default function Results({
           <div className="rounded-2xl border border-border bg-card p-5">
             <SectionLabel help={DEFS.quality}>Call quality indicators</SectionLabel>
             <div className="mt-3 space-y-3">
-              <QualityBar label="Silence score" value={kpis.silence_score} help={DEFS.silence} />
-              <QualityBar label="Agent compliance" value={kpis.agent_compliance} help={DEFS.compliance} />
               <QualityBar label="Empathy score" value={kpis.empathy_score} help={DEFS.empathy} />
+              <QualityBar label="Agent compliance" value={kpis.agent_compliance} help={DEFS.compliance} />
+              <QualityBar label="Silence score" value={kpis.silence_score} help={DEFS.silence} />
             </div>
           </div>
+        </div>
+
+        {/* 4. Emotion intensity + interruption risk — edge signals, least critical */}
+        <div className="grid grid-cols-2 gap-4">
+          <Kpi label="Emotion intensity" value={`${kpis.emotion_intensity}`} suffix="/100" help={DEFS.intensity} />
+          <KpiBadge label="Interruption risk" text={titleCase(kpis.interruption_risk)} className={riskBadge(kpis.interruption_risk)} help={DEFS.interruption} />
         </div>
       </section>
     </div>

@@ -1,7 +1,14 @@
 import type { AnalysisResult, Sentiment } from "./types";
+import {
+  dbSaveAnalysis,
+  dbGetHistory,
+  dbDeleteAnalysis,
+  dbClearHistory,
+  supabaseConfigured,
+} from "./supabase";
 
-// Client-side persistence of analyzed calls (browser localStorage).
-// Swap this module for a DB-backed API later for cross-device history.
+// Persistence: Supabase when configured, localStorage fallback.
+// All functions are async to support both paths uniformly.
 
 export interface StoredAnalysis {
   id: string;
@@ -10,13 +17,13 @@ export interface StoredAnalysis {
   result: AnalysisResult;
 }
 
-const KEY = "sa_history";
+const LS_KEY = "sa_history";
 const MAX_ENTRIES = 200;
 
-export function getHistory(): StoredAnalysis[] {
+function lsGet(): StoredAnalysis[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(LS_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -24,46 +31,59 @@ export function getHistory(): StoredAnalysis[] {
   }
 }
 
-export function saveAnalysis(
+function lsSet(entries: StoredAnalysis[]): void {
+  try {
+    window.localStorage.setItem(LS_KEY, JSON.stringify(entries));
+  } catch {}
+}
+
+export async function getHistory(): Promise<StoredAnalysis[]> {
+  if (supabaseConfigured) {
+    const remote = await dbGetHistory();
+    if (remote.length > 0) return remote;
+  }
+  return lsGet();
+}
+
+export async function saveAnalysis(
   fileName: string | null,
   result: AnalysisResult
-): StoredAnalysis {
+): Promise<StoredAnalysis> {
   const entry: StoredAnalysis = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     fileName: fileName ?? "conversation",
     createdAt: new Date().toISOString(),
     result,
   };
-  const next = [entry, ...getHistory()].slice(0, MAX_ENTRIES);
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* quota or unavailable — non-fatal */
+  if (supabaseConfigured) {
+    await dbSaveAnalysis(entry);
+  } else {
+    lsSet([entry, ...lsGet()].slice(0, MAX_ENTRIES));
   }
   return entry;
 }
 
-export function deleteAnalysis(id: string): void {
-  const next = getHistory().filter((e) => e.id !== id);
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {}
+export async function deleteAnalysis(id: string): Promise<void> {
+  if (supabaseConfigured) {
+    await dbDeleteAnalysis(id);
+  } else {
+    lsSet(lsGet().filter((e) => e.id !== id));
+  }
 }
 
-export function clearHistory(): void {
-  try {
-    window.localStorage.removeItem(KEY);
-  } catch {}
+export async function clearHistory(): Promise<void> {
+  if (supabaseConfigured) {
+    await dbClearHistory();
+  } else {
+    try { window.localStorage.removeItem(LS_KEY); } catch {}
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Aggregation across all stored calls
+// Aggregation
 // ---------------------------------------------------------------------------
 
-export interface TopicCount {
-  topic: string;
-  count: number;
-}
+export interface TopicCount { topic: string; count: number }
 
 export interface Aggregate {
   totalCalls: number;
@@ -79,11 +99,7 @@ export interface Aggregate {
 
 export function isHighRisk(a: StoredAnalysis): boolean {
   const k = a.result.kpis;
-  return (
-    k.churn_risk === "high" ||
-    k.escalation_risk === "high" ||
-    a.result.overall.sentiment === "Negative"
-  );
+  return k.churn_risk === "high" || k.escalation_risk === "high" || a.result.overall.sentiment === "Negative";
 }
 
 export function aggregate(history: StoredAnalysis[]): Aggregate {
