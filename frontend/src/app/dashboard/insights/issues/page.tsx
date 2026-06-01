@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { aggregate, clearHistory } from "@/lib/history";
+import { aggregate } from "@/lib/history";
 import { useHistory } from "@/lib/useHistory";
-import InsightsOverview from "@/components/InsightsOverview";
+import InsightsIssues from "@/components/InsightsIssues";
 import InsightsEmpty from "@/components/InsightsEmpty";
 
-export default function InsightsOverviewPage() {
+export default function InsightsIssuesPage() {
   const { history, ready } = useHistory();
   const agg = useMemo(() => aggregate(history), [history]);
 
@@ -20,5 +20,5 @@ export default function InsightsOverviewPage() {
 
   if (history.length === 0) return <InsightsEmpty />;
 
-  return <InsightsOverview history={history} agg={agg} />;
+  return <InsightsIssues agg={agg} />;
 }

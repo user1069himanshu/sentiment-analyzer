@@ -164,7 +164,7 @@ export default function Results({
 
           {/* Sentence Analysis — clickable card → full page */}
           <Link
-            href="/dashboard/sentences"
+            href="/dashboard/sentences/sentiment"
             className="group flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card p-3.5 transition hover:border-brand hover:shadow-sm"
           >
             {/* Header */}
@@ -231,7 +231,7 @@ export default function Results({
             <EmotionChart
               emotions={emotions}
               onBarClick={(emotion: Emotion) =>
-                router.push(`/dashboard/sentences?filter=emotion&value=${encodeURIComponent(emotion)}`)
+                router.push(`/dashboard/sentences/emotion?value=${encodeURIComponent(emotion)}`)
               }
             />
           </div>
@@ -245,7 +245,7 @@ export default function Results({
               {(["opening", "middle", "closing"] as const).map((phase, i) => (
                 <Link
                   key={phase}
-                  href={`/dashboard/sentences?filter=phase&value=${phase}`}
+                  href={`/dashboard/sentences/phase?value=${phase}`}
                   className="group rounded-xl border border-border p-2.5 text-center transition hover:border-brand hover:bg-brand/5"
                 >
                   <p className="text-xs text-muted mb-1">{["🌅","⚙️","🏁"][i]} {titleCase(phase)}</p>
