@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getHistory, isHighRisk, type StoredAnalysis } from "@/lib/history";
 import { riskBadge, sentimentBadge } from "@/lib/ui";
+import { stashForReopen } from "@/lib/reopen";
 
 /* ── Constants ── */
 const SENTIMENT_OPTIONS = ["Positive", "Neutral", "Negative"] as const;
@@ -59,6 +60,11 @@ export default function FilteredCalls() {
     );
   }
 
+  function openCall(a: StoredAnalysis) {
+    stashForReopen(a);
+    router.push("/dashboard");
+  }
+
   /* ── Loading ── */
   if (!ready) {
     return (
@@ -82,9 +88,9 @@ export default function FilteredCalls() {
         : value;
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full flex-col gap-4 overflow-y-auto">
       {/* ── Breadcrumb header ── */}
-      <div>
+      <div className="shrink-0">
         <div className="mb-1 flex items-center gap-2 text-sm text-muted">
           <Link
             href="/dashboard/insights"
@@ -163,7 +169,7 @@ export default function FilteredCalls() {
         ) : (
           <div className="space-y-3">
             {filtered.map((a) => (
-              <CallCard key={a.id} a={a} />
+              <CallCard key={a.id} a={a} onOpen={() => openCall(a)} />
             ))}
           </div>
         )}
@@ -201,7 +207,7 @@ function Chip({
   );
 }
 
-function CallCard({ a }: { a: StoredAnalysis }) {
+function CallCard({ a, onOpen }: { a: StoredAnalysis; onOpen: () => void }) {
   const csatColor =
     a.result.kpis.csat_proxy >= 70
       ? "text-positive"
@@ -217,7 +223,10 @@ function CallCard({ a }: { a: StoredAnalysis }) {
         : "bg-negative/10 text-negative";
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background p-4">
+    <button
+      onClick={onOpen}
+      className="group block w-full rounded-xl border border-border/60 bg-background p-4 text-left transition hover:border-brand hover:shadow-sm"
+    >
       <div className="flex flex-wrap items-start gap-3">
         {/* File name + summary */}
         <div className="min-w-0 flex-1">
@@ -226,6 +235,7 @@ function CallCard({ a }: { a: StoredAnalysis }) {
               <span className="mr-1 text-negative" title="High risk">⚠</span>
             )}
             {a.fileName}
+            <span className="ml-1.5 text-brand opacity-0 transition group-hover:opacity-100">↗</span>
           </p>
           {a.result.summary && (
             <p className="mt-0.5 line-clamp-2 text-xs text-muted">{a.result.summary}</p>
@@ -279,7 +289,7 @@ function CallCard({ a }: { a: StoredAnalysis }) {
       )}
 
       <p className="mt-2 text-xs text-muted">{formatDate(a.createdAt)}</p>
-    </div>
+    </button>
   );
 }
 

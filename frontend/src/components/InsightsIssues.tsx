@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Aggregate, StoredAnalysis } from "@/lib/history";
 import { sentimentBadge } from "@/lib/ui";
+import { stashForReopen } from "@/lib/reopen";
 
 function filterUrl(kind: string, value: string) {
   return `/dashboard/insights/calls?kind=${encodeURIComponent(kind)}&value=${encodeURIComponent(value)}`;
@@ -13,6 +15,13 @@ function formatDate(iso: string): string {
 }
 
 export default function InsightsIssues({ agg }: { agg: Aggregate }) {
+  const router = useRouter();
+
+  function openCall(a: StoredAnalysis) {
+    stashForReopen(a);
+    router.push("/dashboard");
+  }
+
   return (
     <div className="grid gap-3">
       {/* Top Issues & Topics */}
@@ -52,17 +61,24 @@ export default function InsightsIssues({ agg }: { agg: Aggregate }) {
               View all →
             </Link>
           </div>
-          <p className="mb-3 text-xs text-muted">Negative sentiment + high churn or escalation signal</p>
+          <p className="mb-3 text-xs text-muted">Negative sentiment + high churn or escalation signal · click to re-open</p>
           <div className="space-y-2">
             {agg.highRisk.slice(0, 6).map((a: StoredAnalysis) => (
-              <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm">
-                <span className="min-w-0 flex-1 truncate font-medium">{a.fileName}</span>
+              <button
+                key={a.id}
+                onClick={() => openCall(a)}
+                className="group flex w-full flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card p-3 text-left text-sm transition hover:border-brand hover:shadow-sm"
+              >
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {a.fileName}
+                  <span className="ml-1.5 text-brand opacity-0 transition group-hover:opacity-100">↗</span>
+                </span>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(a.result.overall.sentiment)}`}>
                   {a.result.overall.sentiment}
                 </span>
                 <span className="text-xs text-muted">Sat. {a.result.kpis.csat_proxy}</span>
                 <span className="text-xs text-muted">{formatDate(a.createdAt)}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

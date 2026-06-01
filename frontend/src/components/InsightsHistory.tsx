@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { isHighRisk, type StoredAnalysis } from "@/lib/history";
 import { sentimentBadge } from "@/lib/ui";
+import { stashForReopen } from "@/lib/reopen";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -14,6 +16,13 @@ export default function InsightsHistory({
   history: StoredAnalysis[];
   onClear: () => void;
 }) {
+  const router = useRouter();
+
+  function openCall(a: StoredAnalysis) {
+    stashForReopen(a);
+    router.push("/dashboard");
+  }
+
   return (
     <div className="flex h-full flex-col gap-3">
       {/* Header */}
@@ -21,6 +30,7 @@ export default function InsightsHistory({
         <p className="text-sm text-muted">
           Showing <strong className="text-foreground">{Math.min(history.length, 20)}</strong> of{" "}
           <strong className="text-foreground">{history.length}</strong> calls
+          <span className="ml-2 text-xs">· click any row to re-open the analysis</span>
         </p>
         <button
           onClick={onClear}
@@ -46,11 +56,13 @@ export default function InsightsHistory({
             {history.slice(0, 20).map((a, i) => (
               <tr
                 key={a.id}
-                className={`border-b border-border/40 last:border-0 ${i % 2 !== 0 ? "bg-background/50" : ""}`}
+                onClick={() => openCall(a)}
+                className={`group cursor-pointer border-b border-border/40 transition last:border-0 hover:bg-brand/5 ${i % 2 !== 0 ? "bg-background/50" : ""}`}
               >
                 <td className="max-w-[180px] truncate px-4 py-2.5 font-medium" title={a.fileName}>
                   {isHighRisk(a) && <span className="mr-1 text-negative" title="High risk">⚠</span>}
                   {a.fileName}
+                  <span className="ml-1.5 text-brand opacity-0 transition group-hover:opacity-100">↗</span>
                 </td>
                 <td className="px-3 py-2.5">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(a.result.overall.sentiment)}`}>
