@@ -7,9 +7,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-border bg-card/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+    <div className="flex h-screen flex-col overflow-hidden">
+      <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur">
+        <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <span className="text-xl">💬</span>
@@ -20,7 +20,7 @@ export default function DashboardLayout({
           <LogoutButton />
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-5">{children}</main>
+      <main className="flex-1 overflow-auto px-6 py-4">{children}</main>
     </div>
   );
 }
