@@ -2,11 +2,11 @@
 
 import { type ReactNode } from "react";
 import Link from "next/link";
-import type { AnalysisResult } from "@/lib/types";
-import { riskBadge, sentimentBadge, titleCase } from "@/lib/ui";
+import { useRouter } from "next/navigation";
+import type { AnalysisResult, Emotion } from "@/lib/types";
+import { EMOTION_COLORS, riskBadge, sentimentBadge, titleCase } from "@/lib/ui";
 import { EmotionChart, SentimentTimeline } from "@/components/Charts";
 import InfoTip from "@/components/InfoTip";
-import { EMOTION_COLORS } from "@/lib/ui";
 
 /* ─────────────────────────── Definitions ─────────────────────────── */
 const DEFS = {
@@ -43,6 +43,7 @@ export default function Results({
   fileName: string | null;
   onReset: () => void;
 }) {
+  const router = useRouter();
   const { overall, kpis, emotions, sentences, summary, meta } = result;
 
   const accentColor =
@@ -221,22 +222,38 @@ export default function Results({
             <SentimentTimeline sentences={sentences} />
           </div>
 
+          {/* Emotion Fingerprint — bars are clickable → filter sentences by emotion */}
           <div className="rounded-2xl border border-border bg-card p-3.5">
-            <ChartTitle help={DEFS.emotions}>🎭 Emotion Fingerprint</ChartTitle>
-            <EmotionChart emotions={emotions} />
+            <ChartTitle help={DEFS.emotions}>
+              🎭 Emotion Fingerprint
+              <span className="ml-auto text-xs font-normal text-muted">click a bar to explore</span>
+            </ChartTitle>
+            <EmotionChart
+              emotions={emotions}
+              onBarClick={(emotion: Emotion) =>
+                router.push(`/dashboard/sentences?filter=emotion&value=${encodeURIComponent(emotion)}`)
+              }
+            />
           </div>
 
-          {/* Conversation Arc */}
+          {/* Conversation Arc — each phase is clickable → filter sentences by phase */}
           <div className="rounded-2xl border border-border bg-card p-3.5">
-            <SectionLabel help={DEFS.phase}>🌊 Conversation Arc</SectionLabel>
+            <SectionLabel help={DEFS.phase}>🌊 Conversation Arc
+              <span className="ml-2 text-xs font-normal normal-case tracking-normal text-muted">click phase to explore</span>
+            </SectionLabel>
             <div className="mt-2.5 grid grid-cols-3 gap-2">
               {(["opening", "middle", "closing"] as const).map((phase, i) => (
-                <div key={phase} className="rounded-xl border border-border p-2.5 text-center">
+                <Link
+                  key={phase}
+                  href={`/dashboard/sentences?filter=phase&value=${phase}`}
+                  className="group rounded-xl border border-border p-2.5 text-center transition hover:border-brand hover:bg-brand/5"
+                >
                   <p className="text-xs text-muted mb-1">{["🌅","⚙️","🏁"][i]} {titleCase(phase)}</p>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${sentimentBadge(kpis.call_phase_sentiment[phase])}`}>
                     {kpis.call_phase_sentiment[phase]}
                   </span>
-                </div>
+                  <p className="mt-1 text-xs text-brand opacity-0 transition group-hover:opacity-100">view →</p>
+                </Link>
               ))}
             </div>
           </div>

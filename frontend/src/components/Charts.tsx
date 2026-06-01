@@ -16,9 +16,10 @@ import {
 import type { Emotion, SentenceAnalysis } from "@/lib/types";
 import { EMOTION_COLORS, titleCase } from "@/lib/ui";
 
-const AXIS_STYLE = { fontSize: 10, fill: "var(--muted-foreground, #9ca3af)" };
-const LABEL_STYLE = { fontSize: 10, fill: "var(--muted-foreground, #9ca3af)" };
+const TICK  = { fontSize: 10, fill: "#9ca3af" };
+const LABEL = { fontSize: 10, fill: "#9ca3af" };
 
+/* ── Sentiment timeline (line chart) ── */
 export function SentimentTimeline({ sentences }: { sentences: SentenceAnalysis[] }) {
   const data = sentences.map((s) => ({
     index: s.index + 1,
@@ -28,41 +29,73 @@ export function SentimentTimeline({ sentences }: { sentences: SentenceAnalysis[]
 
   return (
     <ResponsiveContainer width="100%" height={175}>
-      <LineChart data={data} margin={{ top: 4, right: 12, bottom: 28, left: 20 }}>
+      <LineChart data={data} margin={{ top: 6, right: 16, bottom: 32, left: 54 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+
+        {/* X axis — "Utterance #" label below ticks */}
         <XAxis
           dataKey="index"
-          tick={AXIS_STYLE}
+          tick={TICK}
           stroke="var(--border)"
-          label={{ value: "Utterance #", position: "insideBottom", offset: -14, style: LABEL_STYLE }}
+          label={{
+            value: "Utterance #",
+            position: "insideBottom",
+            offset: -14,
+            style: LABEL,
+          }}
         />
+
+        {/* Y axis — "Score" label rotated left of tick numbers */}
         <YAxis
           domain={[-1, 1]}
-          tick={AXIS_STYLE}
+          tick={TICK}
           stroke="var(--border)"
           tickCount={5}
-          label={{ value: "Sentiment Score", angle: -90, position: "insideLeft", offset: 18, style: LABEL_STYLE }}
+          width={38}
+          label={{
+            value: "Score",
+            angle: -90,
+            position: "insideLeft",
+            dx: -28,          // push label into left margin, clear of tick numbers
+            dy: 22,
+            style: LABEL,
+          }}
         />
+
         <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="4 2" />
         <Tooltip
           contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
           formatter={(v) => [`${v}`, "Score"]}
           labelFormatter={(l) => `Utterance ${l}`}
         />
-        <Line type="monotone" dataKey="score" stroke="var(--brand)" strokeWidth={2} dot={{ r: 2 }} />
+        <Line
+          type="monotone"
+          dataKey="score"
+          stroke="var(--brand)"
+          strokeWidth={2}
+          dot={{ r: 2 }}
+          activeDot={{ r: 4 }}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-export function EmotionChart({ emotions }: { emotions: Record<Emotion, number> }) {
+/* ── Emotion fingerprint (bar chart) ── */
+export function EmotionChart({
+  emotions,
+  onBarClick,
+}: {
+  emotions: Record<Emotion, number>;
+  onBarClick?: (emotion: Emotion) => void;
+}) {
   const data = (Object.entries(emotions) as [Emotion, number][])
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])
     .map(([emotion, value]) => ({
       emotion: titleCase(emotion),
-      short: titleCase(emotion).slice(0, 4),   // abbreviated for tight X axis
-      key: emotion,
+      short: titleCase(emotion).slice(0, 5),   // 5-char abbreviation
+      key: emotion as Emotion,
       pct: Math.round(value * 100),
     }));
 
@@ -70,28 +103,62 @@ export function EmotionChart({ emotions }: { emotions: Record<Emotion, number> }
     return <p className="text-sm text-muted">No emotion signal detected.</p>;
   }
 
+  const clickable = !!onBarClick;
+
   return (
     <ResponsiveContainer width="100%" height={175}>
-      <BarChart data={data} margin={{ top: 4, right: 12, bottom: 28, left: 20 }}>
+      <BarChart data={data} margin={{ top: 6, right: 16, bottom: 32, left: 54 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+
+        {/* X axis */}
         <XAxis
           dataKey="short"
-          tick={AXIS_STYLE}
+          tick={TICK}
           stroke="var(--border)"
-          label={{ value: "Emotion", position: "insideBottom", offset: -14, style: LABEL_STYLE }}
+          label={{
+            value: "Emotion",
+            position: "insideBottom",
+            offset: -14,
+            style: LABEL,
+          }}
         />
+
+        {/* Y axis */}
         <YAxis
           unit="%"
-          tick={AXIS_STYLE}
+          tick={TICK}
           stroke="var(--border)"
-          label={{ value: "Share (%)", angle: -90, position: "insideLeft", offset: 18, style: LABEL_STYLE }}
+          width={38}
+          label={{
+            value: "Share %",
+            angle: -90,
+            position: "insideLeft",
+            dx: -28,
+            dy: 22,
+            style: LABEL,
+          }}
         />
+
         <Tooltip
           contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)" }}
-          formatter={(v, _n, entry) => [`${v}%`, (entry.payload as { emotion: string }).emotion]}
+          formatter={(v, _n, entry) => [
+            `${v}%`,
+            (entry.payload as { emotion: string }).emotion,
+          ]}
+          cursor={clickable ? { fill: "rgba(0,0,0,0.06)" } : undefined}
         />
-        <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
-          {data.map((d) => <Cell key={d.key} fill={EMOTION_COLORS[d.key]} />)}
+
+        <Bar
+          dataKey="pct"
+          radius={[4, 4, 0, 0]}
+          style={clickable ? { cursor: "pointer" } : undefined}
+          onClick={(d: unknown) => {
+            if (onBarClick) onBarClick((d as { key: Emotion }).key);
+          }}
+        >
+          {data.map((d) => (
+            <Cell key={d.key} fill={EMOTION_COLORS[d.key]} />
+          ))}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
