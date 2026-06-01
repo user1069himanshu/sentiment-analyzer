@@ -279,28 +279,80 @@ export default function Dashboard() {
 
       {/* ── Samples tab ── */}
       {activeTab === "samples" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {SAMPLE_CALLS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => loadSampleCall(s)}
-              className={`rounded-xl border p-4 text-left transition hover:border-brand hover:bg-brand/5 hover:shadow-sm ${
-                fileName === `${s.title}.txt` ? "border-brand bg-brand/5 shadow-sm" : "border-border bg-card"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 text-xl">{TYPE_ICON[s.type] ?? "📞"}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold">{s.title}</span>
-                    <span className="text-sm">{SENTIMENT_ICON[s.sentiment]}</span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted">{s.type}</p>
-                  <p className="mt-1 text-xs text-foreground/70 line-clamp-2">{s.description}</p>
-                </div>
+        <div className="space-y-4">
+          {/* Featured row — curated for reviewers */}
+          {SAMPLE_CALLS.some((s) => s.featured) && (
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+                  ✨ Recommended for evaluation
+                </span>
+                <span className="text-xs text-muted">
+                  · these best showcase the KPI drivers
+                </span>
               </div>
-            </button>
-          ))}
+              <div className="grid gap-3 sm:grid-cols-3">
+                {SAMPLE_CALLS.filter((s) => s.featured).map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => loadSampleCall(s)}
+                    className={`group relative rounded-xl border-2 p-4 text-left transition hover:border-brand hover:shadow-md ${
+                      fileName === `${s.title}.txt`
+                        ? "border-brand bg-brand/5 shadow-sm"
+                        : "border-brand/40 bg-gradient-to-br from-brand/5 to-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 text-xl">{TYPE_ICON[s.type] ?? "📞"}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-semibold">{s.title}</span>
+                          <span className="text-sm">{SENTIMENT_ICON[s.sentiment]}</span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted">{s.type}</p>
+                        <p className="mt-1.5 text-xs text-foreground/80 line-clamp-2">{s.description}</p>
+                        {s.featuredFor && (
+                          <p className="mt-2 rounded-md border border-brand/20 bg-brand/5 px-2 py-1 text-xs text-brand">
+                            💡 {s.featuredFor}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Full library */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              All {SAMPLE_CALLS.length} sample calls
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {SAMPLE_CALLS.filter((s) => !s.featured).map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => loadSampleCall(s)}
+                  className={`rounded-xl border p-4 text-left transition hover:border-brand hover:bg-brand/5 hover:shadow-sm ${
+                    fileName === `${s.title}.txt` ? "border-brand bg-brand/5 shadow-sm" : "border-border bg-card"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 text-xl">{TYPE_ICON[s.type] ?? "📞"}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-semibold">{s.title}</span>
+                        <span className="text-sm">{SENTIMENT_ICON[s.sentiment]}</span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted">{s.type}</p>
+                      <p className="mt-1 text-xs text-foreground/70 line-clamp-2">{s.description}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

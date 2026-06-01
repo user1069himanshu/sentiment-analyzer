@@ -4,6 +4,8 @@ export interface SampleCall {
   type: string;
   sentiment: "Positive" | "Negative" | "Neutral";
   description: string;
+  featured?: boolean;        // surface at the top of the picker
+  featuredFor?: string;      // one-liner: what this call best showcases
   transcript: string;
 }
 
@@ -13,7 +15,9 @@ export const SAMPLE_CALLS: SampleCall[] = [
     title: "Internet Outage — Resolved",
     type: "Technical Support",
     sentiment: "Positive",
-    description: "Customer frustrated by outage, agent resolves and credits account.",
+    description: "Frustrated customer turned around — full resolution + service credit.",
+    featured: true,
+    featuredFor: "Happy-path demo · all-green KPIs · 5/5 protocol adherence",
     transcript: `Agent: Thank you for calling BrightConnect, this is Priya. How can I help?
 Customer: Hi, my internet has been down since yesterday and I work from home.
 Agent: I'm so sorry about that. Let me pull up your account right away.
@@ -33,7 +37,9 @@ Agent: My pleasure. Have a great day!`,
     title: "Billing Dispute — Escalated",
     type: "Billing",
     sentiment: "Negative",
-    description: "Customer disputes unexpected charge, agent unable to fully resolve.",
+    description: "8-year customer disputes $150 charge, agent can't reverse, churn risk high.",
+    featured: true,
+    featuredFor: "Click 🔒 Churn Risk driver — multiple cancel-signal phrases surface",
     transcript: `Agent: Thank you for calling support, this is Mark.
 Customer: I need to speak to a manager right now. There's a $150 charge on my bill I never authorized.
 Agent: I understand your frustration. Let me look at your account.
@@ -45,9 +51,9 @@ Customer: Every time I call I get passed around. This is ridiculous.
 Agent: I understand. I'm creating a case number and our billing team will call within 48 hours.
 Customer: 48 hours? I want this resolved today.
 Agent: I'm sorry, I don't have the authority to reverse charges over $100. The billing team can.
-Customer: This is the worst customer service I've ever experienced.
+Customer: This is the worst customer service I've ever experienced. Honestly, I'm seriously considering switching to another provider.
 Agent: I truly apologize. Case number is B-29341. Is there anything else I can help with?
-Customer: No. Just fix it.`,
+Customer: No. If this isn't resolved in 48 hours, I'm cancelling and moving to your competitor.`,
   },
   {
     id: "successful-retention",
@@ -137,10 +143,12 @@ Customer: That's great. Thanks Nadia, you restored my faith.`,
   },
   {
     id: "angry-repeat-caller",
-    title: "Repeat Caller — Frustrated",
+    title: "Repeat Caller — Recovery",
     type: "Escalation",
     sentiment: "Negative",
-    description: "Customer has called 5 times about the same issue with no resolution.",
+    description: "Fifth call about same issue — agent skillfully de-escalates by staying on the line.",
+    featured: true,
+    featuredFor: "Click 🤝 Empathy driver — strong phrases land mid-call, tone recovers",
     transcript: `Agent: Technical support, this is Tom.
 Customer: This is my fifth call about the same issue. Fifth. Are you recording this?
 Agent: Yes, all calls are recorded. I'm really sorry you're going through this.
@@ -180,10 +188,10 @@ Agent: Not at all. This is exactly what I'm here for.`,
   },
   {
     id: "service-cancellation-failed",
-    title: "Cancellation — Retention Failed",
+    title: "Cancellation — Amicable",
     type: "Retention",
-    sentiment: "Negative",
-    description: "Customer determined to cancel, agent unable to retain.",
+    sentiment: "Neutral",
+    description: "Customer cancelling to move abroad — agent handles cleanly, no churn signal.",
     transcript: `Agent: Retention department, this is Alex.
 Customer: I'm calling to cancel my service effective immediately.
 Agent: I'm sorry to hear that. Can I ask what's prompted this decision?
