@@ -152,10 +152,10 @@ export default function Results({
             </div>
 
             {/* TIER 2 — Operational KPIs (col-span-1, normal) */}
-            <KpiBadge icon="🔒" label="Churn Risk"      text={titleCase(kpis.churn_risk)}       className={riskBadge(kpis.churn_risk)}      help={DEFS.churn} />
+            <KpiBadge icon="🔒" label="Churn Risk"      text={titleCase(kpis.churn_risk)}       className={riskBadge(kpis.churn_risk)}      help={DEFS.churn}      href="/dashboard/drivers/churn" />
             <KpiBadge icon="✅" label="FCR Status"      text={titleCase(kpis.resolution)}                                                    help={DEFS.resolution} />
-            <Kpi      icon="🤝" label="Empathy"         value={`${kpis.empathy_score}`}         suffix="/100" help={DEFS.empathy} />
-            <Kpi      icon="📋" label="Adherence"       value={`${kpis.agent_compliance}`}      suffix="/100" help={DEFS.compliance} />
+            <Kpi      icon="🤝" label="Empathy"         value={`${kpis.empathy_score}`}         suffix="/100" help={DEFS.empathy}    href="/dashboard/drivers/empathy"   />
+            <Kpi      icon="📋" label="Adherence"       value={`${kpis.agent_compliance}`}      suffix="/100" help={DEFS.compliance} href="/dashboard/drivers/adherence" />
 
             {/* TIER 3 — Directional signals (col-span-2, horizontal badge layout) */}
             <KpiHorizontal icon="🎙️" label="Agent Pulse"    text={kpis.agent_sentiment ?? "—"}   className={kpis.agent_sentiment   ? sentimentBadge(kpis.agent_sentiment)   : "bg-neutral/15 text-muted"} help={DEFS.agentSent} />
@@ -282,11 +282,13 @@ export default function Results({
             </div>
 
             <div className="rounded-2xl border border-border bg-card p-3.5">
-              <SectionLabel help={DEFS.quality}>🏆 Quality Scorecard</SectionLabel>
+              <SectionLabel help={DEFS.quality}>🏆 Quality Scorecard
+                <span className="ml-2 text-xs font-normal normal-case tracking-normal text-muted">click bar for evidence</span>
+              </SectionLabel>
               <div className="mt-2.5 space-y-2.5">
-                <QualityBar icon="🤝" label="Empathy"    value={kpis.empathy_score}   help={DEFS.empathy} />
-                <QualityBar icon="📋" label="Adherence"  value={kpis.agent_compliance} help={DEFS.compliance} />
-                <QualityBar icon="💎" label="Engagement" value={kpis.silence_score}   help={DEFS.silence} />
+                <QualityBar icon="🤝" label="Empathy"    value={kpis.empathy_score}    help={DEFS.empathy}    href="/dashboard/drivers/empathy"    />
+                <QualityBar icon="📋" label="Adherence"  value={kpis.agent_compliance} help={DEFS.compliance} href="/dashboard/drivers/adherence"  />
+                <QualityBar icon="💎" label="Engagement" value={kpis.silence_score}    help={DEFS.silence}    href="/dashboard/drivers/engagement" />
               </div>
             </div>
           </div>
@@ -324,40 +326,56 @@ function ChartTitle({ children, help }: { children: ReactNode; help: string }) {
 }
 
 /** Medium KPI — numeric value */
-function Kpi({ icon, label, value, suffix, help }: {
-  icon: string; label: string; value: string; suffix?: string; help: string;
+function Kpi({ icon, label, value, suffix, help, href }: {
+  icon: string; label: string; value: string; suffix?: string; help: string; href?: string;
 }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-3">
+  const baseCls = "block rounded-2xl border border-border bg-card p-3";
+  const cls = href ? `${baseCls} group cursor-pointer transition hover:border-brand hover:shadow-sm` : baseCls;
+  const inner = (
+    <>
       <div className="flex items-center gap-0.5 text-xs font-medium text-muted">
         <span className="text-sm leading-none">{icon}</span>
         <span className="truncate">{label}</span>
         <InfoTip text={help} />
+        {href && (
+          <span className="ml-auto text-xs text-brand opacity-0 transition group-hover:opacity-100">
+            →
+          </span>
+        )}
       </div>
       <p className="mt-1 text-xl font-bold">
         {value}
         {suffix && <span className="ml-0.5 text-xs font-normal text-muted">{suffix}</span>}
       </p>
-    </div>
+    </>
   );
+  return href ? <Link href={href} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>;
 }
 
 /** Medium KPI — badge value */
-function KpiBadge({ icon, label, text, help, className = "bg-neutral/15 text-muted" }: {
-  icon: string; label: string; text: string; help: string; className?: string;
+function KpiBadge({ icon, label, text, help, className = "bg-neutral/15 text-muted", href }: {
+  icon: string; label: string; text: string; help: string; className?: string; href?: string;
 }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-3">
+  const baseCls = "block rounded-2xl border border-border bg-card p-3";
+  const cls = href ? `${baseCls} group cursor-pointer transition hover:border-brand hover:shadow-sm` : baseCls;
+  const inner = (
+    <>
       <div className="flex items-center gap-0.5 text-xs font-medium text-muted">
         <span className="text-sm leading-none">{icon}</span>
         <span className="truncate">{label}</span>
         <InfoTip text={help} />
+        {href && (
+          <span className="ml-auto text-xs text-brand opacity-0 transition group-hover:opacity-100">
+            →
+          </span>
+        )}
       </div>
       <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${className}`}>
         {text}
       </span>
-    </div>
+    </>
   );
+  return href ? <Link href={href} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>;
 }
 
 /** Tier-3 KPI — horizontal: label on left, badge on right (col-span-2) */
@@ -378,21 +396,27 @@ function KpiHorizontal({ icon, label, text, help, className = "bg-neutral/15 tex
   );
 }
 
-function QualityBar({ icon, label, value, help }: {
-  icon: string; label: string; value: number; help: string;
+function QualityBar({ icon, label, value, help, href }: {
+  icon: string; label: string; value: number; help: string; href?: string;
 }) {
   const color = value >= 70 ? "var(--positive)" : value >= 40 ? "#f59e0b" : "var(--negative)";
-  return (
-    <div>
+  const inner = (
+    <>
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="flex items-center gap-1 font-medium">
           <span className="leading-none">{icon}</span>{label}<InfoTip text={help} />
         </span>
-        <span className="font-semibold tabular-nums">{value}<span className="font-normal text-muted">/100</span></span>
+        <span className="font-semibold tabular-nums">
+          {value}<span className="font-normal text-muted">/100</span>
+          {href && <span className="ml-1.5 text-brand opacity-0 transition group-hover:opacity-100">→</span>}
+        </span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-border">
         <div className="h-1.5 rounded-full transition-all" style={{ width: `${value}%`, background: color }} />
       </div>
-    </div>
+    </>
   );
+  return href
+    ? <Link href={href} className="group block rounded-lg p-1 -m-1 transition hover:bg-background/60">{inner}</Link>
+    : <div>{inner}</div>;
 }
