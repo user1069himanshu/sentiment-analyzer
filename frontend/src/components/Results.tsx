@@ -1,11 +1,12 @@
 "use client";
 
 import { type ReactNode } from "react";
+import Link from "next/link";
 import type { AnalysisResult } from "@/lib/types";
 import { riskBadge, sentimentBadge, titleCase } from "@/lib/ui";
 import { EmotionChart, SentimentTimeline } from "@/components/Charts";
-import SentenceList from "@/components/SentenceList";
 import InfoTip from "@/components/InfoTip";
+import { EMOTION_COLORS } from "@/lib/ui";
 
 /* ─────────────────────────── Definitions ─────────────────────────── */
 const DEFS = {
@@ -160,19 +161,55 @@ export default function Results({
             <KpiHorizontal icon="💬" label="Customer Pulse" text={kpis.customer_sentiment ?? "—"} className={kpis.customer_sentiment ? sentimentBadge(kpis.customer_sentiment) : "bg-neutral/15 text-muted"} help={DEFS.customerSent} />
           </div>
 
-          {/* Transcript — fills remaining height */}
-          <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card p-3.5">
-            <h2 className="mb-2 flex shrink-0 items-center gap-1.5 text-sm font-semibold">
-              💬 Utterance Analysis
-              <span className="rounded-full bg-neutral/15 px-2 py-0.5 text-xs font-normal text-muted">
-                {sentences.length}
+          {/* Sentence Analysis — clickable card → full page */}
+          <Link
+            href="/dashboard/sentences"
+            className="group flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card p-3.5 transition hover:border-brand hover:shadow-sm"
+          >
+            {/* Header */}
+            <div className="mb-3 flex shrink-0 items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                💬 Sentence Analysis
+                <span className="rounded-full bg-neutral/15 px-2 py-0.5 text-xs font-normal text-muted">
+                  {sentences.length}
+                </span>
+                <InfoTip text={DEFS.sentences} />
+              </h2>
+              <span className="text-xs font-medium text-brand opacity-0 transition group-hover:opacity-100">
+                View full table →
               </span>
-              <InfoTip text={DEFS.sentences} />
-            </h2>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <SentenceList sentences={sentences} />
             </div>
-          </div>
+
+            {/* Preview rows */}
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-hidden">
+              {sentences.slice(0, 6).map((s) => (
+                <div
+                  key={s.index}
+                  className="flex items-start gap-2.5 rounded-lg border border-border/50 px-3 py-2"
+                >
+                  <span
+                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: EMOTION_COLORS[s.emotion] }}
+                    title={titleCase(s.emotion)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    {s.speaker && (
+                      <span className="mr-1.5 text-xs font-semibold text-muted">{s.speaker}</span>
+                    )}
+                    <span className="text-xs text-foreground/80 line-clamp-1">{s.text}</span>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${sentimentBadge(s.sentiment)}`}>
+                    {s.sentiment}
+                  </span>
+                </div>
+              ))}
+              {sentences.length > 6 && (
+                <p className="pt-1 text-center text-xs text-muted">
+                  +{sentences.length - 6} more sentences · click to view all
+                </p>
+              )}
+            </div>
+          </Link>
         </div>
 
         {/* ═══════ RIGHT: Analytics ═══════ */}
