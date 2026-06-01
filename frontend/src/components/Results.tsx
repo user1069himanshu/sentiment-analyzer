@@ -330,7 +330,7 @@ function Kpi({ icon, label, value, suffix, help, href }: {
   icon: string; label: string; value: string; suffix?: string; help: string; href?: string;
 }) {
   const baseCls = "block rounded-2xl border border-border bg-card p-3";
-  const cls = href ? `${baseCls} group cursor-pointer transition hover:border-brand hover:shadow-sm` : baseCls;
+  const cls = href ? `${baseCls} group relative cursor-pointer transition hover:border-brand hover:shadow-sm` : baseCls;
   const inner = (
     <>
       <div className="flex items-center gap-0.5 text-xs font-medium text-muted">
@@ -338,8 +338,8 @@ function Kpi({ icon, label, value, suffix, help, href }: {
         <span className="truncate">{label}</span>
         <InfoTip text={help} />
         {href && (
-          <span className="ml-auto text-xs text-brand opacity-0 transition group-hover:opacity-100">
-            →
+          <span className="ml-auto text-xs font-semibold text-brand/60 transition group-hover:text-brand">
+            ↗
           </span>
         )}
       </div>
@@ -357,7 +357,7 @@ function KpiBadge({ icon, label, text, help, className = "bg-neutral/15 text-mut
   icon: string; label: string; text: string; help: string; className?: string; href?: string;
 }) {
   const baseCls = "block rounded-2xl border border-border bg-card p-3";
-  const cls = href ? `${baseCls} group cursor-pointer transition hover:border-brand hover:shadow-sm` : baseCls;
+  const cls = href ? `${baseCls} group relative cursor-pointer transition hover:border-brand hover:shadow-sm` : baseCls;
   const inner = (
     <>
       <div className="flex items-center gap-0.5 text-xs font-medium text-muted">
@@ -365,8 +365,8 @@ function KpiBadge({ icon, label, text, help, className = "bg-neutral/15 text-mut
         <span className="truncate">{label}</span>
         <InfoTip text={help} />
         {href && (
-          <span className="ml-auto text-xs text-brand opacity-0 transition group-hover:opacity-100">
-            →
+          <span className="ml-auto text-xs font-semibold text-brand/60 transition group-hover:text-brand">
+            ↗
           </span>
         )}
       </div>
@@ -406,9 +406,9 @@ function QualityBar({ icon, label, value, help, href }: {
         <span className="flex items-center gap-1 font-medium">
           <span className="leading-none">{icon}</span>{label}<InfoTip text={help} />
         </span>
-        <span className="font-semibold tabular-nums">
+        <span className="flex items-center gap-1 font-semibold tabular-nums">
           {value}<span className="font-normal text-muted">/100</span>
-          {href && <span className="ml-1.5 text-brand opacity-0 transition group-hover:opacity-100">→</span>}
+          {href && <span className="text-brand/60 transition group-hover:text-brand">↗</span>}
         </span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-border">
@@ -417,6 +417,6 @@ function QualityBar({ icon, label, value, help, href }: {
     </>
   );
   return href
-    ? <Link href={href} className="group block rounded-lg p-1 -m-1 transition hover:bg-background/60">{inner}</Link>
+    ? <Link href={href} className="group block rounded-md py-1 px-1.5 -mx-1.5 transition hover:bg-background/60">{inner}</Link>
     : <div>{inner}</div>;
 }

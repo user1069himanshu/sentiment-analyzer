@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { AnalysisResult } from "@/lib/types";
 import { getDriverEvidence, type DriverKey, type EvidenceItem } from "@/lib/evidence";
 import { EMOTION_COLORS, sentimentBadge, titleCase } from "@/lib/ui";
@@ -68,6 +69,7 @@ function EvidenceCard({ item }: { item: EvidenceItem }) {
 
 /* ── Main ── */
 export default function DriverView({ driverKey }: { driverKey: DriverKey }) {
+  const router = useRouter();
   const [result, setResult]     = useState<AnalysisResult | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -98,6 +100,14 @@ export default function DriverView({ driverKey }: { driverKey: DriverKey }) {
 
   const driver = getDriverEvidence(driverKey, result.sentences, result.kpis);
 
+  /* ── Speaker label sanity check — Empathy/Adherence/Churn rely on speaker tags ── */
+  const hasAgentLabels    = result.sentences.some((s) => s.speaker && /agent/i.test(s.speaker));
+  const hasCustomerLabels = result.sentences.some((s) => s.speaker && /customer|client|caller/i.test(s.speaker));
+  const speakerNeeded =
+    (driverKey === "empathy" || driverKey === "adherence") ? !hasAgentLabels :
+    driverKey === "churn"                                  ? !hasCustomerLabels :
+    false;
+
   const verdictColorVar =
     driver.verdictColor === "positive" ? "var(--positive)" :
     driver.verdictColor === "amber"    ? "#f59e0b"          : "var(--negative)";
@@ -115,16 +125,31 @@ export default function DriverView({ driverKey }: { driverKey: DriverKey }) {
 
       {/* ── Header / breadcrumb ── */}
       <div className="shrink-0 flex flex-wrap items-center gap-3">
-        <Link
-          href="/dashboard"
+        <button
+          onClick={() => router.back()}
           className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium transition hover:bg-background"
         >
-          ← Back to Analysis
-        </Link>
+          ← Back
+        </button>
         <span className="text-xs text-muted">
           {fileName ?? "conversation"} · {result.meta.sentence_count} utterances
         </span>
       </div>
+
+      {/* ── Speaker-label warning ── */}
+      {speakerNeeded && (
+        <div className="shrink-0 rounded-2xl border border-amber-300/40 bg-amber-50/60 px-4 py-2.5 dark:border-amber-500/30 dark:bg-amber-500/5">
+          <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+            ⚠️ This transcript has no{" "}
+            <strong>
+              {driverKey === "churn" ? "Customer" : "Agent"}
+            </strong>{" "}
+            speaker labels — evidence detection relies on speaker tags and may be sparse.
+            Format your transcript as <code className="rounded bg-amber-200/40 px-1 font-mono">Agent: …</code>{" "}
+            / <code className="rounded bg-amber-200/40 px-1 font-mono">Customer: …</code> for richer drill-downs.
+          </p>
+        </div>
+      )}
 
       {/* ── Headline metric card ── */}
       <div
@@ -178,24 +203,23 @@ export default function DriverView({ driverKey }: { driverKey: DriverKey }) {
       <div className="shrink-0 rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold">🧮 How this was calculated</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {driver.checklist.map((c, i) => (
-            <div
-              key={i}
-              className={`rounded-xl border p-3 ${
-                c.passed
-                  ? "border-positive/30 bg-positive/5"
-                  : "border-negative/30 bg-negative/5"
-              }`}
-            >
-              <div className="mb-0.5 flex items-center gap-1.5 text-sm font-semibold">
-                <span className={c.passed ? "text-positive" : "text-negative"}>
-                  {c.passed ? "✓" : "✗"}
-                </span>
-                {c.label}
+          {driver.checklist.map((c, i) => {
+            const state = c.passed ? "passed" : c.partial ? "partial" : "failed";
+            const styles = {
+              passed:  { border: "border-positive/30", bg: "bg-positive/5", icon: "✓", iconCls: "text-positive" },
+              partial: { border: "border-amber-300/40 dark:border-amber-500/30", bg: "bg-amber-50/60 dark:bg-amber-500/5", icon: "◐", iconCls: "text-amber-600 dark:text-amber-400" },
+              failed:  { border: "border-negative/30", bg: "bg-negative/5", icon: "✗", iconCls: "text-negative" },
+            }[state];
+            return (
+              <div key={i} className={`rounded-xl border p-3 ${styles.border} ${styles.bg}`}>
+                <div className="mb-0.5 flex items-center gap-1.5 text-sm font-semibold">
+                  <span className={styles.iconCls}>{styles.icon}</span>
+                  {c.label}
+                </div>
+                <p className="text-xs text-muted">{c.detail}</p>
               </div>
-              <p className="text-xs text-muted">{c.detail}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -254,10 +278,7 @@ export default function DriverView({ driverKey }: { driverKey: DriverKey }) {
 
       {/* ── Cross-link footer ── */}
       <div className="shrink-0 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-xs">
-        <span className="text-muted">Explore further:</span>
-        <Link href="/dashboard/sentences/sentiment" className="rounded-full border border-border px-3 py-1 font-medium transition hover:border-brand hover:text-brand">
-          💬 All sentences
-        </Link>
+        <span className="text-muted">Other drivers:</span>
         {driverKey !== "empathy" && (
           <Link href="/dashboard/drivers/empathy" className="rounded-full border border-border px-3 py-1 font-medium transition hover:border-brand hover:text-brand">
             🤝 Empathy

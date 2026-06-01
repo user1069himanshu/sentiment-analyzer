@@ -17,6 +17,7 @@ export interface EvidenceItem {
 export interface DriverChecklistItem {
   label: string;
   passed: boolean;
+  partial?: boolean;   // amber state — neither fully passed nor failed
   detail: string;
 }
 
@@ -125,13 +126,22 @@ function detectEmpathy(sentences: SentenceAnalysis[], kpis: CallKPIs): DriverEvi
 
   items.sort((a, b) => b.weight - a.weight);
 
-  // counter-evidence: agent sentences with negative tone (rude / dismissive)
+  // counter-evidence: agent sentences with negative tone AND no empathy marker.
+  // Acknowledging customer pain ("I see, that's terrible") often has negative
+  // content tone — but it IS empathy, so we exclude any sentence carrying an
+  // empathy marker from the counter-evidence pool.
   const counter: EvidenceItem[] = agentSentences
-    .filter((s) => s.score < -0.2)
+    .filter((s) => {
+      if (s.score >= -0.2) return false;
+      const hasEmpathyMarker =
+        matchMarkers(s.text, EMPATHY_STRONG).length > 0 ||
+        matchMarkers(s.text, EMPATHY_MED).length > 0;
+      return !hasEmpathyMarker;
+    })
     .map((s) => ({
       sentence: s,
       weight: Math.abs(s.score),
-      cues: [{ text: `negative tone (${s.score.toFixed(2)})`, tone: "negative" as const }],
+      cues: [{ text: `negative tone, no empathy marker (${s.score.toFixed(2)})`, tone: "negative" as const }],
     }))
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 3);
@@ -179,14 +189,15 @@ function detectAdherence(sentences: SentenceAnalysis[], kpis: CallKPIs): DriverE
     matchMarkers(s.text, SOLUTION).map((cue) => ({ s, cue })));
   const closingHits = closingAgents.flatMap((s) =>
     matchMarkers(s.text, CLOSING).map((cue) => ({ s, cue })));
-  const resolved = kpis.resolution !== "unresolved";
+  const fullyResolved   = kpis.resolution === "resolved";
+  const partialResolved = kpis.resolution === "partial";
 
-  const buckets = [
-    { label: "1. Greeted at opening",      passed: greetingHits.length > 0, detail: greetingHits.length ? `\"${greetingHits[0].cue}\"` : "No greeting phrase detected in opening third" },
-    { label: "2. Showed empathy",          passed: empathyHits.length  > 0, detail: empathyHits.length  ? `${empathyHits.length} acknowledgment${empathyHits.length === 1 ? "" : "s"}` : "No empathy phrase detected" },
-    { label: "3. Offered a solution",      passed: solutionHits.length > 0, detail: solutionHits.length ? `\"${solutionHits[0].cue}\"` : "No solution-offering phrase detected" },
-    { label: "4. Resolution achieved",     passed: resolved,                detail: `Resolution: ${kpis.resolution}` },
-    { label: "5. Closed warmly",           passed: closingHits.length  > 0, detail: closingHits.length  ? `\"${closingHits[0].cue}\"` : "No closing phrase detected in final third" },
+  const buckets: DriverChecklistItem[] = [
+    { label: "1. Greeted at opening",  passed: greetingHits.length > 0,             detail: greetingHits.length ? `"${greetingHits[0].cue}"` : "No greeting phrase detected in opening third" },
+    { label: "2. Showed empathy",      passed: empathyHits.length  > 0,             detail: empathyHits.length  ? `${empathyHits.length} acknowledgment${empathyHits.length === 1 ? "" : "s"}` : "No empathy phrase detected" },
+    { label: "3. Offered a solution",  passed: solutionHits.length > 0,             detail: solutionHits.length ? `"${solutionHits[0].cue}"` : "No solution-offering phrase detected" },
+    { label: "4. Resolution achieved", passed: fullyResolved, partial: partialResolved, detail: `Resolution: ${kpis.resolution}` },
+    { label: "5. Closed warmly",       passed: closingHits.length  > 0,             detail: closingHits.length  ? `"${closingHits[0].cue}"` : "No closing phrase detected in final third" },
   ];
 
   // Build evidence list: one item per bucket that passed, ordered by call flow
@@ -208,13 +219,19 @@ function detectAdherence(sentences: SentenceAnalysis[], kpis: CallKPIs): DriverE
   takeOne(solutionHits, "Step 3 · Solution");
   takeOne(closingHits,  "Step 5 · Close");
 
-  // counter-evidence: which buckets failed?
-  const missingSteps = buckets.filter((b) => !b.passed).map((b) => b.label);
+  // counter-evidence: which buckets fully failed (excluding partials)?
+  const missingSteps  = buckets.filter((b) => !b.passed && !b.partial).map((b) => b.label);
+  const partialSteps  = buckets.filter((b) => b.partial).map((b) => b.label);
   const counter: EvidenceItem[] = []; // no specific sentences for missing buckets
 
   const value = kpis.agent_compliance;
   const { rating, verdictColor } = ratingFor(value);
-  const passedCount = buckets.filter((b) => b.passed).length;
+  const passedCount  = buckets.filter((b) => b.passed).length;
+  const partialCount = partialSteps.length;
+
+  const oneLineParts = [`${passedCount}/5 protocol steps completed`];
+  if (partialCount > 0)         oneLineParts.push(`${partialCount} partial`);
+  if (missingSteps.length > 0)  oneLineParts.push(`Missing: ${missingSteps.map((s) => s.replace(/^\d+\.\s/, "")).join(", ")}`);
 
   return {
     key: "adherence",
@@ -223,7 +240,7 @@ function detectAdherence(sentences: SentenceAnalysis[], kpis: CallKPIs): DriverE
     value,
     rating,
     verdictColor,
-    oneLine: `${passedCount}/5 protocol steps completed${missingSteps.length ? `. Missing: ${missingSteps.map((s) => s.replace(/^\d+\.\s/, "")).join(", ")}` : "."}`,
+    oneLine: oneLineParts.join(" · ") + ".",
     checklist: buckets,
     evidence,
     counterEvidence: counter,
